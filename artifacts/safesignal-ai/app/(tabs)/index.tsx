@@ -247,17 +247,22 @@ function HomeScreen({ danger, onToggleDanger, onNavigate, onEmergency, onNotific
   );
 }
 
-function RouteScreen({ onNavigate, onBack, topInset }: { onNavigate: (screen: Exclude<Screen, 'splash' | 'emergency'>) => void; onBack: () => void; topInset: number }) {
+function RouteScreen({ onNavigate, onBack, onEmergency, topInset }: { onNavigate: (screen: Exclude<Screen, 'splash' | 'emergency'>) => void; onBack: () => void; onEmergency: () => void; topInset: number }) {
   const [destination, setDestination] = useState('');
   const [selectedRoute, setSelectedRoute] = useState<'safe' | 'fast'>('safe');
   return (
     <Page active="route" onNavigate={onNavigate} topInset={topInset}>
-      <TopBar title="Plan safe route" onBack={onBack} />
+      <TopBar title="Plan safe route" onBack={onBack} right={<TouchableOpacity onPress={onEmergency} style={styles.routeHeaderSos}><Icon name="alert-circle" size={19} color={C.destructive} /></TouchableOpacity>} />
       <View style={styles.inputStack}>
         <View style={styles.inputShell}><Icon name="location" size={18} color={C.primary} /><Text style={styles.inputText}>Current location</Text><View style={styles.livePill}><View style={styles.liveDot} /><Text style={styles.liveText}>Live</Text></View></View>
         <View style={styles.inputShell}><Icon name="flag" size={18} color={C.mutedForeground} /><TextInput value={destination} onChangeText={setDestination} placeholder="Enter destination" placeholderTextColor={C.mutedForeground} style={styles.textInput} /></View>
       </View>
       <MapPlaceholder />
+      <TouchableOpacity onPress={onEmergency} activeOpacity={0.84} style={styles.routeEmergencyBanner}>
+        <View style={styles.routeEmergencyIcon}><Icon name="alert-circle" size={23} color={C.primaryForeground} /></View>
+        <View style={styles.routeEmergencyCopy}><Text style={styles.routeEmergencyTitle}>Need help on this trip?</Text><Text style={styles.routeEmergencySubtitle}>Emergency contacts and nearby services are ready</Text></View>
+        <View style={styles.routeEmergencyButton}><Text style={styles.routeEmergencyButtonText}>SOS</Text><Icon name="chevron-forward" size={15} color={C.primaryForeground} /></View>
+      </TouchableOpacity>
       <SectionHeading title="Choose your route" />
       <TouchableOpacity onPress={() => setSelectedRoute('safe')} activeOpacity={0.88} style={[styles.routeCard, selectedRoute === 'safe' && styles.routeCardSelected, { borderLeftColor: C.success }]}>
         <View style={styles.routeHeader}><View><View style={styles.recommendedBadge}><Icon name="checkmark-circle" size={13} color={C.success} /><Text style={styles.recommendedText}>Recommended</Text></View><Text style={styles.routeTitle}>Safe route</Text></View><View style={[styles.radio, selectedRoute === 'safe' && styles.radioSelected]}>{selectedRoute === 'safe' ? <View style={styles.radioInner} /> : null}</View></View>
@@ -269,6 +274,11 @@ function RouteScreen({ onNavigate, onBack, topInset }: { onNavigate: (screen: Ex
         <Text style={styles.routeStats}>14 min  ·  9 km  ·  <Text style={{ color: C.destructive }}>Risk: High</Text></Text>
         <View style={styles.chipRow}><View style={styles.dangerChip}><Text style={styles.chipTextDanger}>High crime</Text></View><View style={styles.dangerChip}><Text style={styles.chipTextDanger}>Accident zone</Text></View><View style={styles.dangerChip}><Text style={styles.chipTextDanger}>Unsafe network</Text></View></View>
       </TouchableOpacity>
+      <SectionHeading title="Emergency contacts" action="Manage" />
+      <ContactRow initials="PS" name="Priya S." relation="Sister" />
+      <ContactRow initials="RM" name="Rajan M." relation="Father" />
+      <SectionHeading title="Nearby emergency services" />
+      <View style={styles.servicesRow}>{[{ icon: 'shield' as IconName, label: 'Police', distance: '0.8 km' }, { icon: 'medkit' as IconName, label: 'Hospital', distance: '1.2 km' }, { icon: 'flame' as IconName, label: 'Fire station', distance: '2.1 km' }].map((service) => <View key={service.label} style={styles.serviceCard}><View style={styles.serviceIcon}><Icon name={service.icon} size={20} color={C.primary} /></View><Text style={styles.serviceLabel}>{service.label}</Text><Text style={styles.serviceDistance}>{service.distance}</Text><TouchableOpacity onPress={onEmergency} style={styles.callIconButton}><Icon name="call" size={15} color={C.primary} /></TouchableOpacity></View>)}</View>
       <Button label={`Navigate ${selectedRoute === 'safe' ? 'safe' : 'fastest'} route`} icon="navigate" onPress={() => onNavigate('home')} />
     </Page>
   );
@@ -401,7 +411,7 @@ export default function SafeSignalHome() {
 
   if (screen === 'splash') return <SplashScreen onStart={() => setScreen('home')} topInset={topInset} bottomInset={bottomInset} />;
   if (screen === 'home') return <HomeScreen danger={danger} onToggleDanger={() => setDanger(!danger)} onNavigate={navigate} onEmergency={openEmergency} onNotification={() => navigate('alerts')} topInset={topInset} />;
-  if (screen === 'route') return <RouteScreen onNavigate={navigate} onBack={() => navigate('home')} topInset={topInset} />;
+  if (screen === 'route') return <RouteScreen onNavigate={navigate} onBack={() => navigate('home')} onEmergency={openEmergency} topInset={topInset} />;
   if (screen === 'scan') return <ScanScreen onNavigate={navigate} topInset={topInset} />;
   if (screen === 'alerts') return <AlertsScreen filter={alertFilter} setFilter={setAlertFilter} onNavigate={navigate} topInset={topInset} />;
   if (screen === 'profile') return <ProfileScreen onNavigate={navigate} topInset={topInset} />;
@@ -415,6 +425,7 @@ const styles = StyleSheet.create({
   topBarTitle: { fontFamily: 'Inter_700Bold', fontSize: 19, color: C.foreground, textTransform: 'capitalize' },
   topBarSide: { width: 44, alignItems: 'flex-start', justifyContent: 'center' },
   topBarRight: { alignItems: 'flex-end' },
+  routeHeaderSos: { width: 34, height: 34, borderRadius: 11, backgroundColor: C.dangerSoft, alignItems: 'center', justifyContent: 'center' },
   dashboardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 14, paddingBottom: 22 },
   eyebrow: { fontFamily: 'Inter_600SemiBold', fontSize: 10, letterSpacing: 1.1, color: C.mutedForeground, marginBottom: 5 },
   brandTitle: { fontFamily: 'Inter_700Bold', fontSize: 27, letterSpacing: -0.8, color: C.foreground },
@@ -537,6 +548,13 @@ const styles = StyleSheet.create({
   mapIconCircle: { width: 54, height: 54, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#CBD5E1', marginBottom: 10 },
   mapTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: C.mutedForeground, textTransform: 'capitalize' },
   mapSubtitle: { fontFamily: 'Inter_400Regular', fontSize: 11, color: '#94A3B8', marginTop: 4 },
+  routeEmergencyBanner: { backgroundColor: '#FFF1F2', borderWidth: 1, borderColor: '#FECDD3', borderRadius: 16, padding: 12, flexDirection: 'row', alignItems: 'center', marginBottom: 21 },
+  routeEmergencyIcon: { width: 43, height: 43, borderRadius: 14, backgroundColor: C.destructive, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
+  routeEmergencyCopy: { flex: 1 },
+  routeEmergencyTitle: { fontFamily: 'Inter_700Bold', fontSize: 13, color: '#881337', marginBottom: 4 },
+  routeEmergencySubtitle: { fontFamily: 'Inter_400Regular', fontSize: 10, color: '#9F1239', lineHeight: 14 },
+  routeEmergencyButton: { backgroundColor: C.destructive, borderRadius: 9, paddingVertical: 8, paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', gap: 2 },
+  routeEmergencyButtonText: { fontFamily: 'Inter_700Bold', fontSize: 11, color: C.primaryForeground, letterSpacing: 0.5 },
   routeCard: { backgroundColor: C.card, borderRadius: 15, borderWidth: 1, borderColor: C.border, borderLeftWidth: 4, padding: 14, marginBottom: 11 },
   routeCardSelected: { borderColor: C.primary, shadowColor: C.primary, shadowOpacity: 0.09, shadowRadius: 9, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
   routeHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
