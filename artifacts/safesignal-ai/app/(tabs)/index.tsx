@@ -190,33 +190,55 @@ function Page({ children, active, onNavigate, topInset, scroll = true }: { child
 }
 
 function HomeScreen({ danger, onToggleDanger, onNavigate, onEmergency, onNotification, topInset }: { danger: boolean; onToggleDanger: () => void; onNavigate: (screen: Exclude<Screen, 'splash' | 'emergency'>) => void; onEmergency: () => void; onNotification: () => void; topInset: number }) {
+  const [destination, setDestination] = useState('Indiranagar, Bengaluru');
+  const [selectedRoute, setSelectedRoute] = useState<'safe' | 'fast'>('safe');
+  const [navigating, setNavigating] = useState(false);
+  const [showTripDetails, setShowTripDetails] = useState(false);
+
   return (
     <Page active="home" onNavigate={onNavigate} topInset={topInset}>
-      <AppHeader onNotification={onNotification} />
-      <StatusBanner danger={danger} onPress={onToggleDanger} />
-      <View style={styles.statRow}>
-        <StatCard icon="warning" label="Crime risk" value="High" tint={C.destructive} />
-        <StatCard icon="radio" label="Cyber threats" value="2 Found" tint={C.warning} />
-        <StatCard icon="wifi" label="Network" value="Unsafe" tint={C.destructive} />
+      <View style={styles.routeHomeHeader}>
+        <View>
+          <Text style={styles.eyebrow}>YOUR SAFE TRIP</Text>
+          <Text style={styles.brandTitle}>Plan a safer <Text style={styles.brandAccent}>journey</Text></Text>
+          <Text style={styles.homeHeaderSub}>Good morning, Sukesh</Text>
+        </View>
+        <TouchableOpacity onPress={onNotification} style={styles.headerIconButton}>
+          <Icon name="notifications-outline" size={22} color={C.foreground} />
+          <View style={styles.notificationDot} />
+        </TouchableOpacity>
       </View>
-      <SectionHeading title="Quick actions" />
-      <View style={styles.quickActions}>
-        {[
-          { icon: 'map-outline' as IconName, label: 'Route', screen: 'route' as const },
-          { icon: 'scan-outline' as IconName, label: 'Scan', screen: 'scan' as const },
-          { icon: 'notifications-outline' as IconName, label: 'Alerts', screen: 'alerts' as const },
-          { icon: 'person-outline' as IconName, label: 'Profile', screen: 'profile' as const },
-        ].map((item) => (
-          <TouchableOpacity key={item.label} onPress={() => onNavigate(item.screen)} style={styles.quickAction} activeOpacity={0.78}>
-            <View style={styles.quickIcon}><Icon name={item.icon} size={22} color={C.primary} /></View>
-            <Text style={styles.quickLabel}>{item.label}</Text>
-          </TouchableOpacity>
-        ))}
+
+      <TouchableOpacity onPress={onToggleDanger} activeOpacity={0.84} style={[styles.tripSafetyPill, danger && styles.tripSafetyPillDanger]}>
+        <View style={[styles.tripSafetyDot, danger && styles.tripSafetyDotDanger]} />
+        <Text style={[styles.tripSafetyText, danger && styles.tripSafetyTextDanger]}>{danger ? 'High risk detected around you' : 'You are in a low-risk area'}</Text>
+        <Icon name="chevron-forward" size={16} color={danger ? C.destructive : C.success} />
+      </TouchableOpacity>
+
+      <View style={styles.routeSearchCard}>
+        <View style={styles.routeSearchTitleRow}><View><Text style={styles.routeSearchEyebrow}>SAFE ROUTE PLANNER</Text><Text style={styles.routeSearchTitle}>Where are you going?</Text></View><View style={styles.routeSearchIcon}><Icon name="navigate" size={20} color={C.primary} /></View></View>
+        <View style={styles.routeHomeInput}><View style={styles.routeInputRail}><View style={styles.routeInputDot} /><View style={styles.routeInputLine} /><View style={[styles.routeInputDot, styles.routeInputDotEnd]} /></View><View style={styles.routeInputCopy}><Text style={styles.routeInputLabel}>FROM</Text><Text style={styles.routeInputValue}>Current location</Text><View style={styles.routeLiveTag}><View style={styles.liveDot} /><Text style={styles.liveText}>Live</Text></View><Text style={[styles.routeInputLabel, styles.routeToLabel]}>TO</Text><TextInput value={destination} onChangeText={setDestination} placeholder="Enter destination" placeholderTextColor={C.mutedForeground} style={styles.routeHomeTextInput} /></View></View>
       </View>
-      <SectionHeading title="Recent alerts" action="View all" />
-      <View style={styles.alertList}>
-        {alerts.slice(0, 3).map((alert) => <AlertRow key={alert.title} alert={alert} compact />)}
+
+      <View style={styles.homeMapPreview}>
+        <View style={styles.mapPreviewTop}><View style={styles.mapPreviewStatus}><View style={styles.mapPreviewStatusDot} /><Text style={styles.mapPreviewStatusText}>Safety map preview</Text></View><TouchableOpacity onPress={() => setShowTripDetails(!showTripDetails)} style={styles.mapPreviewControl}><Icon name={showTripDetails ? 'contract' : 'expand'} size={17} color={C.foreground} /></TouchableOpacity></View>
+        <View style={styles.routeVisual}><View style={styles.routeVisualLineBack} /><View style={styles.routeVisualLine} /><View style={styles.routeStartDot}><Icon name="location" size={13} color={C.primaryForeground} /></View><View style={styles.routeEndDot}><Icon name="flag" size={13} color={C.primaryForeground} /></View><View style={styles.routeVisualLabel}><Icon name="shield-checkmark" size={13} color={C.success} /><Text style={styles.routeVisualLabelText}>Low-risk corridor</Text></View></View>
+        <View style={styles.mapPreviewBottom}><View><Text style={styles.mapPreviewDistance}>12 km</Text><Text style={styles.mapPreviewMeta}>20 min via safe route</Text></View><View style={styles.mapPlaceholderMini}><Icon name="map-outline" size={15} color={C.mutedForeground} /><Text style={styles.mapMiniText}>Map coming soon</Text></View></View>
       </View>
+
+      <View style={styles.bestRouteHeading}><View><Text style={styles.sectionTitle}>Best route for you</Text><Text style={styles.bestRouteSub}>Prioritizing safety over speed</Text></View><View style={styles.routeScore}><Icon name="shield-checkmark" size={14} color={C.success} /><Text style={styles.routeScoreText}>92 safety score</Text></View></View>
+      <TouchableOpacity onPress={() => setSelectedRoute('safe')} activeOpacity={0.88} style={[styles.homeRouteOption, selectedRoute === 'safe' && styles.homeRouteOptionSelected]}>
+        <View style={styles.homeRouteIcon}><Icon name="shield-checkmark" size={21} color={C.success} /></View><View style={styles.homeRouteCopy}><View style={styles.homeRouteTitleRow}><Text style={styles.homeRouteTitle}>Safe route</Text><Text style={styles.homeRecommended}>RECOMMENDED</Text></View><Text style={styles.homeRouteMeta}>20 min  ·  12 km  ·  Low crime</Text></View><View style={[styles.radio, selectedRoute === 'safe' && styles.radioSelected]}>{selectedRoute === 'safe' ? <View style={styles.radioInner} /> : null}</View>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => setSelectedRoute('fast')} activeOpacity={0.88} style={[styles.homeRouteOption, selectedRoute === 'fast' && styles.homeRouteOptionFastSelected]}>
+        <View style={[styles.homeRouteIcon, styles.homeRouteIconFast]}><Icon name="flash" size={21} color={C.warning} /></View><View style={styles.homeRouteCopy}><View style={styles.homeRouteTitleRow}><Text style={styles.homeRouteTitle}>Fastest route</Text><Text style={styles.homeNotRecommended}>HIGH RISK</Text></View><Text style={styles.homeRouteMeta}>14 min  ·  9 km  ·  Accident zone</Text></View><View style={[styles.radio, selectedRoute === 'fast' && { borderColor: C.warning }]}>{selectedRoute === 'fast' ? <View style={[styles.radioInner, { backgroundColor: C.warning }]} /> : null}</View>
+      </TouchableOpacity>
+
+      {showTripDetails ? <View style={styles.tripDetails}><View style={styles.tripDetail}><Icon name="shield-checkmark-outline" size={17} color={C.success} /><Text style={styles.tripDetailText}>No accident reports along this route</Text></View><View style={styles.tripDetail}><Icon name="wifi-outline" size={17} color={C.primary} /><Text style={styles.tripDetailText}>Safe network coverage expected</Text></View></View> : null}
+      <Button label={navigating ? 'End navigation' : `Start ${selectedRoute === 'safe' ? 'safe' : 'fastest'} navigation`} icon={navigating ? 'stop-circle-outline' : 'navigate'} variant={navigating ? 'danger' : 'primary'} onPress={() => setNavigating(!navigating)} />
+      {navigating ? <View style={styles.navigationLive}><View style={styles.navigationLiveDot} /><Text style={styles.navigationLiveText}>Navigation active · Rechecking threats as you travel</Text></View> : null}
+
+      <View style={styles.homeActionRow}><TouchableOpacity onPress={() => onNavigate('scan')} style={styles.homeActionCard}><View style={styles.homeActionIcon}><Icon name="scan-outline" size={20} color={C.primary} /></View><Text style={styles.homeActionTitle}>Scan area</Text><Text style={styles.homeActionSub}>Check nearby threats</Text></TouchableOpacity><TouchableOpacity onPress={() => onNavigate('alerts')} style={styles.homeActionCard}><View style={styles.homeActionIcon}><Icon name="notifications-outline" size={20} color={C.warning} /></View><Text style={styles.homeActionTitle}>Live alerts</Text><Text style={styles.homeActionSub}>2 active nearby</Text></TouchableOpacity></View>
       <TouchableOpacity onPress={onEmergency} style={styles.sosButton} activeOpacity={0.8}>
         <Icon name="alert-circle" size={21} color={C.primaryForeground} />
         <Text style={styles.sosButtonText}>SOS EMERGENCY</Text>
@@ -397,8 +419,76 @@ const styles = StyleSheet.create({
   eyebrow: { fontFamily: 'Inter_600SemiBold', fontSize: 10, letterSpacing: 1.1, color: C.mutedForeground, marginBottom: 5 },
   brandTitle: { fontFamily: 'Inter_700Bold', fontSize: 27, letterSpacing: -0.8, color: C.foreground },
   brandAccent: { color: C.primary },
+  routeHomeHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingTop: 14, paddingBottom: 16 },
+  homeHeaderSub: { fontFamily: 'Inter_400Regular', color: C.mutedForeground, fontSize: 12, marginTop: 6 },
   headerIconButton: { width: 44, height: 44, borderRadius: 14, backgroundColor: C.card, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
   notificationDot: { position: 'absolute', right: 10, top: 9, width: 7, height: 7, borderRadius: 4, backgroundColor: C.destructive, borderWidth: 1.5, borderColor: C.card },
+  tripSafetyPill: { minHeight: 37, borderRadius: 11, paddingHorizontal: 12, backgroundColor: C.successSoft, borderWidth: 1, borderColor: '#BBF7D0', flexDirection: 'row', alignItems: 'center', marginBottom: 13 },
+  tripSafetyPillDanger: { backgroundColor: C.dangerSoft, borderColor: '#FECACA' },
+  tripSafetyDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: C.success, marginRight: 8 },
+  tripSafetyDotDanger: { backgroundColor: C.destructive },
+  tripSafetyText: { flex: 1, fontFamily: 'Inter_600SemiBold', color: '#15803D', fontSize: 11 },
+  tripSafetyTextDanger: { color: '#B91C1C' },
+  routeSearchCard: { backgroundColor: C.card, borderWidth: 1, borderColor: C.border, borderRadius: 17, padding: 15, marginBottom: 13, shadowColor: C.primary, shadowOpacity: 0.05, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
+  routeSearchTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 15 },
+  routeSearchEyebrow: { fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 1.1, color: C.primary, marginBottom: 4 },
+  routeSearchTitle: { fontFamily: 'Inter_700Bold', fontSize: 19, color: C.foreground, letterSpacing: -0.3 },
+  routeSearchIcon: { width: 41, height: 41, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: C.secondary },
+  routeHomeInput: { flexDirection: 'row', minHeight: 99, borderRadius: 13, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: C.border, paddingVertical: 11, paddingHorizontal: 10 },
+  routeInputRail: { width: 21, alignItems: 'center', paddingTop: 5 },
+  routeInputDot: { width: 9, height: 9, borderRadius: 5, borderWidth: 2, borderColor: C.primary, backgroundColor: C.card },
+  routeInputDotEnd: { borderColor: C.destructive, backgroundColor: C.dangerSoft },
+  routeInputLine: { width: 1, flex: 1, borderLeftWidth: 1, borderStyle: 'dashed', borderColor: '#93C5FD', marginVertical: 3 },
+  routeInputCopy: { flex: 1, paddingLeft: 5, position: 'relative' },
+  routeInputLabel: { fontFamily: 'Inter_700Bold', color: C.mutedForeground, fontSize: 9, letterSpacing: 0.9, marginBottom: 3 },
+  routeInputValue: { fontFamily: 'Inter_500Medium', color: C.foreground, fontSize: 13 },
+  routeToLabel: { marginTop: 12 },
+  routeLiveTag: { position: 'absolute', right: 2, top: 0, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.successSoft, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 4 },
+  routeHomeTextInput: { fontFamily: 'Inter_500Medium', color: C.foreground, fontSize: 13, paddingVertical: 0, paddingHorizontal: 0, height: 22 },
+  homeMapPreview: { height: 198, borderRadius: 17, backgroundColor: '#E2E8F0', overflow: 'hidden', padding: 12, marginBottom: 21 },
+  mapPreviewTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  mapPreviewStatus: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 6 },
+  mapPreviewStatusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: C.success, marginRight: 5 },
+  mapPreviewStatusText: { fontFamily: 'Inter_600SemiBold', fontSize: 10, color: C.mutedForeground },
+  mapPreviewControl: { width: 30, height: 30, borderRadius: 9, backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center' },
+  routeVisual: { flex: 1, position: 'relative', marginHorizontal: 16, marginVertical: 3 },
+  routeVisualLineBack: { position: 'absolute', left: '18%', right: '16%', top: '45%', height: 8, backgroundColor: '#CBD5E1', borderRadius: 5, transform: [{ rotate: '-17deg' }] },
+  routeVisualLine: { position: 'absolute', left: '18%', right: '16%', top: '45%', height: 4, backgroundColor: C.primary, borderRadius: 4, transform: [{ rotate: '-17deg' }] },
+  routeStartDot: { position: 'absolute', left: '10%', top: '58%', width: 27, height: 27, borderRadius: 14, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: '#DBEAFE' },
+  routeEndDot: { position: 'absolute', right: '7%', top: '20%', width: 27, height: 27, borderRadius: 14, backgroundColor: C.destructive, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: '#FECACA' },
+  routeVisualLabel: { position: 'absolute', left: '35%', top: '18%', flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#F0FDF4', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 5 },
+  routeVisualLabelText: { fontFamily: 'Inter_600SemiBold', color: '#15803D', fontSize: 10 },
+  mapPreviewBottom: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
+  mapPreviewDistance: { fontFamily: 'Inter_700Bold', color: C.foreground, fontSize: 18 },
+  mapPreviewMeta: { fontFamily: 'Inter_400Regular', color: C.mutedForeground, fontSize: 10, marginTop: 2 },
+  mapPlaceholderMini: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#CBD5E1', borderRadius: 7, paddingHorizontal: 7, paddingVertical: 5 },
+  mapMiniText: { fontFamily: 'Inter_500Medium', color: C.mutedForeground, fontSize: 9 },
+  bestRouteHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 11 },
+  bestRouteSub: { fontFamily: 'Inter_400Regular', color: C.mutedForeground, fontSize: 11, marginTop: 4 },
+  routeScore: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.successSoft, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 6 },
+  routeScoreText: { fontFamily: 'Inter_700Bold', color: '#15803D', fontSize: 10 },
+  homeRouteOption: { minHeight: 74, backgroundColor: C.card, borderRadius: 14, borderWidth: 1, borderColor: C.border, padding: 11, flexDirection: 'row', alignItems: 'center', marginBottom: 9 },
+  homeRouteOptionSelected: { borderColor: C.success, backgroundColor: '#F0FDF4' },
+  homeRouteOptionFastSelected: { borderColor: C.warning, backgroundColor: '#FFFBEB' },
+  homeRouteIcon: { width: 40, height: 40, borderRadius: 13, backgroundColor: C.successSoft, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
+  homeRouteIconFast: { backgroundColor: C.warningSoft },
+  homeRouteCopy: { flex: 1 },
+  homeRouteTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  homeRouteTitle: { fontFamily: 'Inter_700Bold', color: C.foreground, fontSize: 14 },
+  homeRecommended: { fontFamily: 'Inter_700Bold', color: C.success, fontSize: 8, letterSpacing: 0.5 },
+  homeNotRecommended: { fontFamily: 'Inter_700Bold', color: C.warning, fontSize: 8, letterSpacing: 0.5 },
+  homeRouteMeta: { fontFamily: 'Inter_400Regular', color: C.mutedForeground, fontSize: 11, marginTop: 5 },
+  tripDetails: { backgroundColor: C.card, borderWidth: 1, borderColor: C.border, borderRadius: 13, padding: 11, marginTop: 2, marginBottom: 4 },
+  tripDetail: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 5 },
+  tripDetailText: { fontFamily: 'Inter_500Medium', color: C.mutedForeground, fontSize: 11 },
+  navigationLive: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.dangerSoft, borderRadius: 10, padding: 9, marginTop: 9 },
+  navigationLiveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: C.destructive, marginRight: 7 },
+  navigationLiveText: { flex: 1, fontFamily: 'Inter_600SemiBold', color: '#B91C1C', fontSize: 10 },
+  homeActionRow: { flexDirection: 'row', gap: 9, marginTop: 17, marginBottom: 3 },
+  homeActionCard: { flex: 1, backgroundColor: C.card, borderRadius: 14, borderWidth: 1, borderColor: C.border, padding: 12 },
+  homeActionIcon: { width: 34, height: 34, borderRadius: 11, backgroundColor: C.secondary, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  homeActionTitle: { fontFamily: 'Inter_700Bold', color: C.foreground, fontSize: 12 },
+  homeActionSub: { fontFamily: 'Inter_400Regular', color: C.mutedForeground, fontSize: 10, marginTop: 4 },
   statusBanner: { borderRadius: 16, padding: 15, flexDirection: 'row', alignItems: 'center', marginBottom: 16, borderWidth: 1 },
   statusSafe: { backgroundColor: C.successSoft, borderColor: '#BBF7D0' },
   statusDanger: { backgroundColor: C.dangerSoft, borderColor: '#FECACA' },
