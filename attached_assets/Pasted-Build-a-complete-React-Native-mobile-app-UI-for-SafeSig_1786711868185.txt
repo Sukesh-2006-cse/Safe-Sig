@@ -1,0 +1,143 @@
+Build a complete React Native mobile app UI for "SafeSignal AI" — an 
+intelligent secure navigation and network risk mapping system. 
+Light theme only. Mobile-first, 390px viewport. Use React Native components 
+(View, ScrollView, TouchableOpacity, Text, TextInput, Switch, StyleSheet). 
+Use a single App.js file with useState to manage screen navigation — no 
+expo-router, no react-navigation. Use SafeAreaView on all screens.
+
+DO NOT use any map library, MapView, or Google Maps. 
+Wherever a map would appear, render a plain gray card (height: 200, 
+backgroundColor: '#E2E8F0', borderRadius: 12, justifyContent: 'center', 
+alignItems: 'center') with a 🗺️ emoji and text "Map Integration Coming Soon" 
+in gray below it.
+
+Design System:
+- Background: #F8FAFC
+- Card background: #FFFFFF
+- Primary blue: #2563EB
+- Danger red: #EF4444
+- Warning orange: #F59E0B
+- Success green: #10B981
+- Text primary: #1E293B
+- Text secondary: #64748B
+- Border: #E2E8F0
+- Card shadow: elevation 2, shadowColor #000, shadowOpacity 0.06, shadowRadius 8
+- Border radius: 12 for cards, 8 for buttons/inputs
+- Font: System default (no custom fonts needed)
+
+Build these 7 screens with full mock data — no API calls:
+
+--- SCREEN 1: Splash ---
+- White background
+- Center-aligned: large 🛡️ emoji (72px), app name "SafeSignal AI" in bold 28px primary blue, 
+  subtitle "Smart Navigation. Threat Detection. Safe Travel." in 14px gray
+- Bottom section: "Get Started" full-width blue button → navigates to Home
+
+--- SCREEN 2: Home Dashboard ---
+- Header bar: "SafeSignal AI" left bold, bell icon right (use a simple Text "🔔")
+- Safety status banner card: green bg (#DCFCE7) with "✅ You are in a Safe Zone" bold text 
+  and "Low risk area detected" subtitle. Tappable to toggle to red danger state 
+  (#FEE2E2, "⚠️ High Risk Zone Detected")
+- Stats row: 3 equal-width cards with icon + label + value:
+  1. 🔴 Crime Risk | High
+  2. 📡 Cyber Threats | 2 Found  
+  3. 📶 Network | Unsafe
+- Quick Actions: 4 icon buttons in a row: 🗺️ Route | 📡 Scan | 🔔 Alerts | 👤 Profile
+- "Recent Alerts" section heading then 3 alert list items, each with:
+  - Left colored border (3px, red for physical, orange for cyber)
+  - Alert title (bold, 14px) + subtitle (12px gray) + right-side "2m ago" badge
+  - Mock data: "High Crime Area Ahead" / "Suspicious Wi-Fi Detected" / "Accident Reported"
+- Fixed bottom: red full-width "🆘 SOS EMERGENCY" button (height 54, red bg, white bold text)
+
+--- SCREEN 3: Route Planner ---
+- Header: back arrow + "Plan Safe Route"
+- Two input fields stacked: "📍 From: Current Location" and "🏁 To: Enter destination" 
+  (TextInput with border, icon prefix, borderRadius 8)
+- Gray map placeholder card (height 200)
+- "Choose Your Route" section label
+- Two route option cards:
+  Card 1 (recommended): green left border (4px), badge "✅ Recommended" top-right in green,
+  title "Safe Route", stats row: "⏱ 20 min  📏 12 km  ⚡ Risk: Low"
+  risk chips row: green chips for "🔍 Low Crime" "⚠️ No Accidents" "📶 Safe Network"
+  
+  Card 2: red left border (4px), badge "⚠️ Not Recommended" in red,
+  title "Fastest Route", stats: "⏱ 14 min  📏 9 km  ⚡ Risk: High"
+  risk chips: red chips "🔴 High Crime" "🚗 Accident Zone" "📵 Unsafe Network"
+- "Navigate Safe Route" full-width blue button at bottom
+
+--- SCREEN 4: Threat Detection ---
+- Header: "Threat Scanner"
+- Toggle row: "Real-time Monitoring" label left + Switch component right (default ON)
+- 3 scanner cards (each a white card with shadow):
+  1. "📶 Wi-Fi Scanner" 
+     Status badge: orange "⚠️ 2 Suspicious Found"
+     Description: "Detected fake hotspots nearby"
+     "Scan Again" outlined blue button
+  2. "🔵 Bluetooth Monitor"
+     Status badge: green "✅ Safe"
+     Description: "No suspicious devices found"
+     "Scan Again" outlined button
+  3. "🌐 Phishing Detector"
+     TextInput "Enter URL or scan QR code" + "Check" blue button
+     Status: gray "Ready to scan"
+- "Active Threats" section with 2 threat cards (red bg #FEF2F2):
+  - "Evil Twin Wi-Fi" | Severity: High | "200m from your location"
+  - "Phishing Link Blocked" | Severity: Medium | "Just now"
+
+--- SCREEN 5: Live Alerts ---
+- Header: "Live Alerts"
+- Filter tabs: 3 tabs "All" | "Physical" | "Cyber" — active tab blue underline, 
+  inactive gray. useState to filter the list
+- Alert list (ScrollView): 5 mock alert cards, each with:
+  - Left border 4px (red=physical, orange=cyber, yellow=warning)
+  - Left: icon (use text emoji) + right: alert title bold 14px + subtitle 12px gray
+  - Bottom row: distance badge (blue pill "500m ahead") + time ("3 min ago") right-aligned
+  Mock alerts:
+  1. 🚨 "High Crime Area" | "Avoid route ahead" | Physical | 500m | 2 min ago
+  2. 📡 "Suspicious Wi-Fi" | "Evil Twin detected" | Cyber | 110m | 5 min ago
+  3. 🚗 "Accident Reported" | "Drive carefully" | Physical | 300m | 12 min ago
+  4. 🔗 "Phishing Link" | "Blocked malicious URL" | Cyber | N/A | 20 min ago
+  5. 💡 "Low Light Zone" | "Poorly lit area ahead" | Physical | 1km | 1 hr ago
+- If filter shows 0 results: centered empty state with 🛡️ + "All Clear! No threats"
+
+--- SCREEN 6: SOS Emergency ---
+- Header: "Emergency"
+- Center top: pulsing red circle (use Animated.loop with opacity 0.4→1) with 
+  "SOS" white text bold 32px inside (circle size: 140x140, borderRadius 70, bg #EF4444)
+- Below circle: gray hint text "Tap to alert emergency contacts & share location"
+- "Share Live Location" outlined red button
+- "Emergency Contacts" section: 2 contact cards with avatar circle (initials), 
+  name, relation, "📞 Call" outlined button right
+  Mock: "Priya S." — Sister | "Rajan M." — Father
+- "Nearby Services" section: 3 cards in a row (equal width, shadow):
+  🚓 Police Station | 0.8 km
+  🏥 Hospital | 1.2 km  
+  🚒 Fire Station | 2.1 km
+  Each with a "📞" small button
+
+--- SCREEN 7: Profile & Settings ---
+- Profile section: avatar circle (initials "SM", blue bg), 
+  name "Sukesh M", "24CS0949 | CSE Dept" subtitle
+- "Settings" section heading, then list of settings rows (each: icon + label left, 
+  toggle or chevron right, separated by thin border):
+  🔔 Push Notifications — Switch ON
+  📍 Background Location — Switch ON
+  🛡️ Auto Threat Scan — Switch ON
+  🌙 Night Mode Alerts — Switch ON
+  📞 SOS Auto-Call — Switch OFF
+  👥 Emergency Contacts — chevron ">" (navigates to contacts editor — 
+     show a simple modal or inline section with 2 contacts + "Add Contact" button)
+- "About SafeSignal AI" row with chevron
+- "Logout" text button in red centered at bottom
+
+--- PERSISTENT BOTTOM NAV (Screens 2–7) ---
+White bar, top border, 5 tabs: 
+🏠 Home | 🗺️ Route | 📡 Scan | 🔔 Alerts | 👤 Profile
+Active tab: icon + label in #2563EB; inactive: #94A3B8
+Tab bar height: 60px, icons 24px
+
+All data is hardcoded mock data. No external APIs. No maps. 
+The app must feel polished, clean, and professional — like a real 
+security app available on the Play Store. Pay special attention to 
+card shadows, consistent spacing (16px padding on all screens), 
+and readable typography hierarchy.

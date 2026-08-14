@@ -1,0 +1,24 @@
+kind = "mobile"
+previewPath = "/safesignal-ai/"
+title = "SafeSignal AI"
+description = "A polished mobile safety companion for intelligent navigation, network threat detection, live alerts, emergency contacts, and safer travel decisions."
+version = "1.0.0"
+id = "artifacts/safesignal-ai"
+router = "expo-domain"
+
+[[services]]
+name = "expo"
+ensurePreviewReachable = "/status"
+paths = [ "/safesignal-ai/" ]
+localPort = 23114
+
+[services.development]
+run = "pnpm --filter @workspace/safesignal-ai run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/safesignal-ai", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/safesignal-ai", "run", "serve" ]
+
+[services.env]
+PORT = "23114"
+BASE_PATH = "/safesignal-ai/"
