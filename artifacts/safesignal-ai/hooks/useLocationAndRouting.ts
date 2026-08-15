@@ -109,7 +109,7 @@ async function geocodeLocationMultiEngine(query: string, referenceCoords: Locati
 
 export function useLocationAndRouting(
   initialSource: string = 'Current location (GPS)',
-  initialDestination: string = 'Guindy'
+  initialDestination: string = ''
 ) {
   const [sourceText, setSourceText] = useState<string>(initialSource);
   const [destinationText, setDestinationText] = useState<string>(initialDestination);
@@ -120,11 +120,11 @@ export function useLocationAndRouting(
     name: 'Current location (Kundrathur)',
   });
 
-  const [destinationCoords, setDestinationCoords] = useState<LocationCoords | null>({
-    lat: 13.0067,
-    lng: 80.2020,
-    name: 'Guindy',
-  });
+  const [destinationCoords, setDestinationCoords] = useState<LocationCoords | null>(
+    initialDestination && initialDestination.trim()
+      ? { lat: 13.0067, lng: 80.2020, name: initialDestination }
+      : null
+  );
 
   const [isGeocodingSource, setIsGeocodingSource] = useState<boolean>(false);
   const [isGeocodingDest, setIsGeocodingDest] = useState<boolean>(false);

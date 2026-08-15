@@ -209,7 +209,7 @@ function HomeScreen({ danger, onToggleDanger, onNavigate, onEmergency, onNotific
     swapLocations,
     geocodeSource,
     geocodeDestination,
-  } = useLocationAndRouting('Current location (GPS)', 'Guindy');
+  } = useLocationAndRouting('Current location (GPS)', '');
   const [selectedRoute, setSelectedRoute] = useState<'safe' | 'fast'>('safe');
   const [navigating, setNavigating] = useState(false);
   const [showTripDetails, setShowTripDetails] = useState(false);
@@ -280,17 +280,48 @@ function HomeScreen({ danger, onToggleDanger, onNavigate, onEmergency, onNotific
               <TextInput
                 value={destinationText}
                 onChangeText={setDestinationText}
-                placeholder="Guindy"
+                placeholder="Enter destination (e.g. Guindy)"
                 placeholderTextColor={C.mutedForeground}
                 style={[styles.routeHomeTextInput, { flex: 1 }]}
               />
               {isGeocodingDest ? <ActivityIndicator size="small" color={C.primary} /> : null}
             </View>
 
+            {/* Quick Destination Suggestions */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+              <Text style={{ fontSize: 10, fontWeight: '700', color: C.mutedForeground }}>QUICK:</Text>
+              {['Guindy', 'T. Nagar', 'Airport', 'Velachery'].map((spot) => (
+                <TouchableOpacity
+                  key={spot}
+                  onPress={() => {
+                    setDestinationText(spot);
+                    geocodeDestination(spot);
+                  }}
+                  style={{
+                    backgroundColor: destinationText === spot ? '#EFF6FF' : '#F1F5F9',
+                    paddingVertical: 3,
+                    paddingHorizontal: 8,
+                    borderRadius: 6,
+                    borderWidth: 1,
+                    borderColor: destinationText === spot ? '#93C5FD' : '#E2E8F0',
+                  }}
+                >
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: destinationText === spot ? C.primary : C.foreground }}>
+                    {spot}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
             <TouchableOpacity
               onPress={() => {
                 geocodeSource(sourceText);
-                geocodeDestination(destinationText);
+                if (destinationText && destinationText.trim()) {
+                  geocodeDestination(destinationText);
+                } else {
+                  setDestinationText('Guindy');
+                  geocodeDestination('Guindy');
+                }
               }}
               style={{
                 backgroundColor: C.primary,
@@ -306,7 +337,7 @@ function HomeScreen({ danger, onToggleDanger, onNavigate, onEmergency, onNotific
               activeOpacity={0.8}
             >
               <Icon name="search" size={13} color="#FFFFFF" />
-              <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 12 }}>Update Route</Text>
+              <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 12 }}>Search Safe Route</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -316,19 +347,35 @@ function HomeScreen({ danger, onToggleDanger, onNavigate, onEmergency, onNotific
         <View style={styles.mapPreviewTop}>
           <View style={styles.mapPreviewStatus}>
             <View style={styles.mapPreviewStatusDot} />
-            <Text style={styles.mapPreviewStatusText}>Live Route: Current Location ➔ Guindy</Text>
+            <Text style={styles.mapPreviewStatusText}>
+              {destinationCoords
+                ? `Live Route: ${originCoords?.name || 'Current Location'} ➔ ${destinationCoords.name}`
+                : '📍 Current Location: Live GPS Active'}
+            </Text>
           </View>
         </View>
         <GraphHopperMap origin={originCoords} destination={destinationCoords} routeType={selectedRoute} height={200} incidents={incidents} />
       </View>
 
-      <View style={styles.bestRouteHeading}><View><Text style={styles.sectionTitle}>Guindy Route Options</Text><Text style={styles.bestRouteSub}>Prioritizing safety over speed</Text></View><View style={styles.routeScore}><Icon name="shield-checkmark" size={14} color={C.success} /><Text style={styles.routeScoreText}>94 safety score</Text></View></View>
-      <TouchableOpacity onPress={() => setSelectedRoute('safe')} activeOpacity={0.88} style={[styles.homeRouteOption, selectedRoute === 'safe' && styles.homeRouteOptionSelected]}>
-        <View style={styles.homeRouteIcon}><Icon name="shield-checkmark" size={21} color={C.success} /></View><View style={styles.homeRouteCopy}><View style={styles.homeRouteTitleRow}><Text style={styles.homeRouteTitle}>Safest Route (Green)</Text><Text style={styles.homeRecommended}>RECOMMENDED</Text></View><Text style={styles.homeRouteMeta}>20 min  ·  13.8 km  ·  Via Kovur, Kolapakkam & Manapakkam</Text></View><View style={[styles.radio, selectedRoute === 'safe' && styles.radioSelected]}>{selectedRoute === 'safe' ? <View style={styles.radioInner} /> : null}</View>
-      </TouchableOpacity>
-      <TouchableOpacity onPress={() => setSelectedRoute('fast')} activeOpacity={0.88} style={[styles.homeRouteOption, selectedRoute === 'fast' && styles.homeRouteOptionFastSelected]}>
-        <View style={[styles.homeRouteIcon, styles.homeRouteIconFast]}><Icon name="flash" size={21} color={C.destructive} /></View><View style={styles.homeRouteCopy}><View style={styles.homeRouteTitleRow}><Text style={styles.homeRouteTitle}>Shortest Direct Route (Red Dotted)</Text><Text style={styles.homeNotRecommended}>HIGH RISK</Text></View><Text style={styles.homeRouteMeta}>16 min  ·  10.8 km  ·  Passes Pammal Robbery Crime & Accident Spot</Text></View><View style={[styles.radio, selectedRoute === 'fast' && { borderColor: C.destructive }]}>{selectedRoute === 'fast' ? <View style={[styles.radioInner, { backgroundColor: C.destructive }]} /> : null}</View>
-      </TouchableOpacity>
+      {destinationCoords ? (
+        <>
+          <View style={styles.bestRouteHeading}><View><Text style={styles.sectionTitle}>{destinationCoords.name} Route Options</Text><Text style={styles.bestRouteSub}>Prioritizing safety over speed</Text></View><View style={styles.routeScore}><Icon name="shield-checkmark" size={14} color={C.success} /><Text style={styles.routeScoreText}>94 safety score</Text></View></View>
+          <TouchableOpacity onPress={() => setSelectedRoute('safe')} activeOpacity={0.88} style={[styles.homeRouteOption, selectedRoute === 'safe' && styles.homeRouteOptionSelected]}>
+            <View style={styles.homeRouteIcon}><Icon name="shield-checkmark" size={21} color={C.success} /></View><View style={styles.homeRouteCopy}><View style={styles.homeRouteTitleRow}><Text style={styles.homeRouteTitle}>Safest Route (Green)</Text><Text style={styles.homeRecommended}>RECOMMENDED</Text></View><Text style={styles.homeRouteMeta}>20 min  ·  13.8 km  ·  Via Kovur, Kolapakkam & Manapakkam</Text></View><View style={[styles.radio, selectedRoute === 'safe' && styles.radioSelected]}>{selectedRoute === 'safe' ? <View style={styles.radioInner} /> : null}</View>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setSelectedRoute('fast')} activeOpacity={0.88} style={[styles.homeRouteOption, selectedRoute === 'fast' && styles.homeRouteOptionFastSelected]}>
+            <View style={[styles.homeRouteIcon, styles.homeRouteIconFast]}><Icon name="flash" size={21} color={C.destructive} /></View><View style={styles.homeRouteCopy}><View style={styles.homeRouteTitleRow}><Text style={styles.homeRouteTitle}>Shortest Direct Route (Red Dotted)</Text><Text style={styles.homeNotRecommended}>HIGH RISK</Text></View><Text style={styles.homeRouteMeta}>16 min  ·  10.8 km  ·  Passes Pammal Robbery Crime & Accident Spot</Text></View><View style={[styles.radio, selectedRoute === 'fast' && { borderColor: C.destructive }]}>{selectedRoute === 'fast' ? <View style={[styles.radioInner, { backgroundColor: C.destructive }]} /> : null}</View>
+          </TouchableOpacity>
+        </>
+      ) : (
+        <View style={{ backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 14, padding: 14, marginTop: 10, alignItems: 'center' }}>
+          <Icon name="navigate-circle-outline" size={26} color={C.primary} />
+          <Text style={{ fontSize: 13, fontWeight: '700', color: C.foreground, marginTop: 4 }}>Select a destination to view safe routes</Text>
+          <Text style={{ fontSize: 11, color: C.mutedForeground, textAlign: 'center', marginTop: 2 }}>
+            Tap "Guindy" above or enter any destination to compare the Safest (Green) vs Shortest (Red Dotted) paths.
+          </Text>
+        </View>
+      )}
 
       {/* Time & Distance Comparison Card */}
       <View style={{ backgroundColor: C.card, borderRadius: 14, padding: 14, marginVertical: 12, borderWidth: 1, borderColor: C.border }}>
