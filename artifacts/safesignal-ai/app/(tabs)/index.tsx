@@ -377,6 +377,34 @@ function RouteScreen({ onNavigate, onBack, onEmergency, topInset, incidents = []
     useCurrentGpsAsSource,
   } = useLocationAndRouting('Current location (GPS)', 'Guindy');
   const [selectedRoute, setSelectedRoute] = useState<'safe' | 'fast'>('safe');
+  const mockRouteIncidents = useMemo(() => [
+    {
+      id: 'mock_crime_pammal_highway',
+      title: '🚨 Highway Robbery & Theft Spot',
+      subtitle: 'Anakaputhur / Pammal Stretch • High Crime Threat 88%',
+      category: 'Crime' as ThreatCategory,
+      district: 'Pammal Stretch, Chennai',
+      lat: 12.9750,
+      lng: 80.0950,
+      time: '15 mins ago',
+      tone: 'danger' as const,
+      sourceName: 'SafeSignal Crime Scanner',
+    },
+    {
+      id: 'mock_accident_blockage_pammal',
+      title: '🚨 Multi-Vehicle Collision Blockage',
+      subtitle: 'Shortest Direct Road Blocked • Police & Rescue Active',
+      category: 'Accident' as ThreatCategory,
+      district: 'Anakaputhur / Pammal Stretch',
+      lat: 12.9730,
+      lng: 80.1340,
+      time: 'Just Now',
+      tone: 'danger' as const,
+      sourceName: 'SafeSignal AI Auto-Reroute Active (Detour)',
+    },
+  ], []);
+  const routeIncidents = useMemo(() => [...mockRouteIncidents, ...incidents], [mockRouteIncidents, incidents]);
+
   return (
     <Page active="route" onNavigate={onNavigate} topInset={topInset}>
       <TopBar title="Plan safe route" onBack={onBack} right={<TouchableOpacity onPress={onEmergency} style={styles.routeHeaderSos}><Icon name="alert-circle" size={19} color={C.destructive} /></TouchableOpacity>} />
@@ -407,7 +435,7 @@ function RouteScreen({ onNavigate, onBack, onEmergency, topInset, incidents = []
           {isGeocodingDest ? <ActivityIndicator size="small" color={C.primary} /> : null}
         </View>
       </View>
-      <GraphHopperMap origin={originCoords} destination={destinationCoords} routeType={selectedRoute} height={230} incidents={incidents} />
+      <GraphHopperMap origin={originCoords} destination={destinationCoords} routeType={selectedRoute} height={230} incidents={routeIncidents} />
       <TouchableOpacity onPress={onEmergency} activeOpacity={0.84} style={styles.routeEmergencyBanner}>
         <View style={styles.routeEmergencyIcon}><Icon name="alert-circle" size={23} color={C.primaryForeground} /></View>
         <View style={styles.routeEmergencyCopy}><Text style={styles.routeEmergencyTitle}>Need help on this trip?</Text><Text style={styles.routeEmergencySubtitle}>Emergency contacts and nearby services are ready</Text></View>
@@ -661,6 +689,18 @@ export default function SafeSignalHome() {
 
   const mockRouteIncidents = useMemo(() => {
     return [
+      {
+        id: 'mock_crime_pammal_highway',
+        title: '🚨 Highway Robbery & Theft Spot',
+        subtitle: 'Anakaputhur / Pammal Stretch • High Crime Threat 88%',
+        category: 'Crime' as ThreatCategory,
+        district: 'Pammal Stretch, Chennai',
+        lat: 12.9750,
+        lng: 80.0950,
+        time: '15 mins ago',
+        tone: 'danger' as const,
+        sourceName: 'SafeSignal Crime Scanner',
+      },
       {
         id: 'mock_accident_blockage_pammal',
         title: '🚨 Multi-Vehicle Collision Blockage',

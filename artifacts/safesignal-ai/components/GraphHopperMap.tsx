@@ -147,7 +147,10 @@ export function GraphHopperMap({
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     html, body, #map { height: 100%; width: 100%; margin: 0; padding: 0; background: #F8FAFC; }
-    .round-pin { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; border: 2.5px solid #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.35); }
+    .round-pin { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; border: 2.5px solid #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.35); cursor: pointer; }
+    .round-pin-crime { background: radial-gradient(circle at 35% 35%, #EF4444, #991B1B) !important; box-shadow: 0 0 14px rgba(239,68,68,0.85) !important; color: #ffffff; }
+    .round-pin-accident { background: radial-gradient(circle at 35% 35%, #F97316, #C2410C) !important; box-shadow: 0 0 14px rgba(249,115,22,0.85) !important; color: #ffffff; }
+    .round-pin-hazard { background: radial-gradient(circle at 35% 35%, #F59E0B, #B45309) !important; box-shadow: 0 0 14px rgba(245,158,11,0.85) !important; color: #ffffff; }
     .round-pin-sos { background: radial-gradient(circle at 35% 35%, #DC2626, #7F1D1D) !important; border: 3px solid #FFFFFF !important; box-shadow: 0 0 16px #DC2626, 0 0 30px rgba(220, 38, 38, 0.8) !important; animation: sosPulseRing 1.2s infinite alternate ease-in-out; z-index: 10000 !important; }
     @keyframes sosPulseRing {
       0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); transform: scale(1); }
