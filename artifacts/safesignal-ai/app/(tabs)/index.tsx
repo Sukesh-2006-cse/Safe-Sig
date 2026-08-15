@@ -206,7 +206,7 @@ function HomeScreen({ danger, onToggleDanger, onNavigate, onEmergency, onNotific
     swapLocations,
     geocodeSource,
     geocodeDestination,
-  } = useLocationAndRouting('Current location (GPS)', '');
+  } = useLocationAndRouting('Current location (GPS)', 'Guindy, Chennai');
   const [selectedRoute, setSelectedRoute] = useState<'safe' | 'fast'>('safe');
   const [navigating, setNavigating] = useState(false);
   const [showTripDetails, setShowTripDetails] = useState(false);
@@ -248,7 +248,7 @@ function HomeScreen({ danger, onToggleDanger, onNavigate, onEmergency, onNotific
             <View style={[styles.routeInputDot, styles.routeInputDotEnd]} />
           </View>
           <View style={styles.routeInputCopy}>
-            <Text style={styles.routeInputLabel}>FROM (SOURCE)</Text>
+            <Text style={styles.routeInputLabel}>FROM (CURRENT LOCATION)</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <TextInput
                 value={sourceText}
@@ -270,7 +270,7 @@ function HomeScreen({ danger, onToggleDanger, onNavigate, onEmergency, onNotific
               <TextInput
                 value={destinationText}
                 onChangeText={setDestinationText}
-                placeholder="Where to? (e.g. Indiranagar, Airport)"
+                placeholder="Guindy, Chennai"
                 placeholderTextColor={C.mutedForeground}
                 style={[styles.routeHomeTextInput, { flex: 1 }]}
               />
@@ -306,23 +306,23 @@ function HomeScreen({ danger, onToggleDanger, onNavigate, onEmergency, onNotific
         <View style={styles.mapPreviewTop}>
           <View style={styles.mapPreviewStatus}>
             <View style={styles.mapPreviewStatusDot} />
-            <Text style={styles.mapPreviewStatusText}>Live GraphHopper map</Text>
+            <Text style={styles.mapPreviewStatusText}>Live Route: Current Location ➔ Guindy, Chennai</Text>
           </View>
         </View>
         <GraphHopperMap origin={originCoords} destination={destinationCoords} routeType={selectedRoute} height={200} incidents={incidents} />
       </View>
 
-      <View style={styles.bestRouteHeading}><View><Text style={styles.sectionTitle}>Best route for you</Text><Text style={styles.bestRouteSub}>Prioritizing safety over speed</Text></View><View style={styles.routeScore}><Icon name="shield-checkmark" size={14} color={C.success} /><Text style={styles.routeScoreText}>92 safety score</Text></View></View>
+      <View style={styles.bestRouteHeading}><View><Text style={styles.sectionTitle}>Guindy Route Options</Text><Text style={styles.bestRouteSub}>Prioritizing safety over speed</Text></View><View style={styles.routeScore}><Icon name="shield-checkmark" size={14} color={C.success} /><Text style={styles.routeScoreText}>94 safety score</Text></View></View>
       <TouchableOpacity onPress={() => setSelectedRoute('safe')} activeOpacity={0.88} style={[styles.homeRouteOption, selectedRoute === 'safe' && styles.homeRouteOptionSelected]}>
-        <View style={styles.homeRouteIcon}><Icon name="shield-checkmark" size={21} color={C.success} /></View><View style={styles.homeRouteCopy}><View style={styles.homeRouteTitleRow}><Text style={styles.homeRouteTitle}>Safe route</Text><Text style={styles.homeRecommended}>RECOMMENDED</Text></View><Text style={styles.homeRouteMeta}>20 min  ·  12 km  ·  Low crime</Text></View><View style={[styles.radio, selectedRoute === 'safe' && styles.radioSelected]}>{selectedRoute === 'safe' ? <View style={styles.radioInner} /> : null}</View>
+        <View style={styles.homeRouteIcon}><Icon name="shield-checkmark" size={21} color={C.success} /></View><View style={styles.homeRouteCopy}><View style={styles.homeRouteTitleRow}><Text style={styles.homeRouteTitle}>Safest Route to Guindy</Text><Text style={styles.homeRecommended}>RECOMMENDED</Text></View><Text style={styles.homeRouteMeta}>22 min  ·  13.2 km  ·  Bypasses Kathipara Accident Zone</Text></View><View style={[styles.radio, selectedRoute === 'safe' && styles.radioSelected]}>{selectedRoute === 'safe' ? <View style={styles.radioInner} /> : null}</View>
       </TouchableOpacity>
       <TouchableOpacity onPress={() => setSelectedRoute('fast')} activeOpacity={0.88} style={[styles.homeRouteOption, selectedRoute === 'fast' && styles.homeRouteOptionFastSelected]}>
-        <View style={[styles.homeRouteIcon, styles.homeRouteIconFast]}><Icon name="flash" size={21} color={C.warning} /></View><View style={styles.homeRouteCopy}><View style={styles.homeRouteTitleRow}><Text style={styles.homeRouteTitle}>Fastest route</Text><Text style={styles.homeNotRecommended}>HIGH RISK</Text></View><Text style={styles.homeRouteMeta}>14 min  ·  9 km  ·  Accident zone</Text></View><View style={[styles.radio, selectedRoute === 'fast' && { borderColor: C.warning }]}>{selectedRoute === 'fast' ? <View style={[styles.radioInner, { backgroundColor: C.warning }]} /> : null}</View>
+        <View style={[styles.homeRouteIcon, styles.homeRouteIconFast]}><Icon name="flash" size={21} color={C.warning} /></View><View style={styles.homeRouteCopy}><View style={styles.homeRouteTitleRow}><Text style={styles.homeRouteTitle}>Shortest Direct Route</Text><Text style={styles.homeNotRecommended}>HIGH RISK</Text></View><Text style={styles.homeRouteMeta}>16 min  ·  10.8 km  ·  Passes Kathipara Accident & Saidapet Crime</Text></View><View style={[styles.radio, selectedRoute === 'fast' && { borderColor: C.warning }]}>{selectedRoute === 'fast' ? <View style={[styles.radioInner, { backgroundColor: C.warning }]} /> : null}</View>
       </TouchableOpacity>
 
-      {showTripDetails ? <View style={styles.tripDetails}><View style={styles.tripDetail}><Icon name="shield-checkmark-outline" size={17} color={C.success} /><Text style={styles.tripDetailText}>No accident reports along this route</Text></View><View style={styles.tripDetail}><Icon name="wifi-outline" size={17} color={C.primary} /><Text style={styles.tripDetailText}>Safe network coverage expected</Text></View></View> : null}
-      <Button label={navigating ? 'End navigation' : `Start ${selectedRoute === 'safe' ? 'safe' : 'fastest'} navigation`} icon={navigating ? 'stop-circle-outline' : 'navigate'} variant={navigating ? 'danger' : 'primary'} onPress={() => setNavigating(!navigating)} />
-      {navigating ? <View style={styles.navigationLive}><View style={styles.navigationLiveDot} /><Text style={styles.navigationLiveText}>Navigation active · Rechecking threats as you travel</Text></View> : null}
+      {showTripDetails ? <View style={styles.tripDetails}><View style={styles.tripDetail}><Icon name="shield-checkmark-outline" size={17} color={C.success} /><Text style={styles.tripDetailText}>Safest route detours around Kathipara Junction</Text></View><View style={styles.tripDetail}><Icon name="wifi-outline" size={17} color={C.primary} /><Text style={styles.tripDetailText}>Safe network coverage across Chennai corridor</Text></View></View> : null}
+      <Button label={navigating ? 'End navigation' : `Start ${selectedRoute === 'safe' ? 'safest' : 'shortest'} Guindy navigation`} icon={navigating ? 'stop-circle-outline' : 'navigate'} variant={navigating ? 'danger' : 'primary'} onPress={() => setNavigating(!navigating)} />
+      {navigating ? <View style={styles.navigationLive}><View style={styles.navigationLiveDot} /><Text style={styles.navigationLiveText}>Navigation active · Rechecking Kathipara & Saidapet threats</Text></View> : null}
 
       <View style={styles.homeActionRow}><TouchableOpacity onPress={() => onNavigate('scan')} style={styles.homeActionCard}><View style={styles.homeActionIcon}><Icon name="scan-outline" size={20} color={C.primary} /></View><Text style={styles.homeActionTitle}>Scan area</Text><Text style={styles.homeActionSub}>Check nearby threats</Text></TouchableOpacity><TouchableOpacity onPress={() => onNavigate('alerts')} style={styles.homeActionCard}><View style={styles.homeActionIcon}><Icon name="notifications-outline" size={20} color={C.warning} /></View><Text style={styles.homeActionTitle}>Live alerts</Text><Text style={styles.homeActionSub}>2 active nearby</Text></TouchableOpacity></View>
       <TouchableOpacity onPress={onEmergency} style={styles.sosButton} activeOpacity={0.8}>
@@ -344,7 +344,7 @@ function RouteScreen({ onNavigate, onBack, onEmergency, topInset, incidents = []
     isGeocodingSource,
     isGeocodingDest,
     useCurrentGpsAsSource,
-  } = useLocationAndRouting('Current location (GPS)', '');
+  } = useLocationAndRouting('Current location (GPS)', 'Guindy, Chennai');
   const [selectedRoute, setSelectedRoute] = useState<'safe' | 'fast'>('safe');
   return (
     <Page active="route" onNavigate={onNavigate} topInset={topInset}>
@@ -369,7 +369,7 @@ function RouteScreen({ onNavigate, onBack, onEmergency, topInset, incidents = []
           <TextInput
             value={destinationText}
             onChangeText={setDestinationText}
-            placeholder="Enter destination (e.g. Indiranagar, Airport)"
+            placeholder="Guindy, Chennai"
             placeholderTextColor={C.mutedForeground}
             style={styles.textInput}
           />
@@ -382,16 +382,16 @@ function RouteScreen({ onNavigate, onBack, onEmergency, topInset, incidents = []
         <View style={styles.routeEmergencyCopy}><Text style={styles.routeEmergencyTitle}>Need help on this trip?</Text><Text style={styles.routeEmergencySubtitle}>Emergency contacts and nearby services are ready</Text></View>
         <View style={styles.routeEmergencyButton}><Text style={styles.routeEmergencyButtonText}>SOS</Text><Icon name="chevron-forward" size={15} color={C.primaryForeground} /></View>
       </TouchableOpacity>
-      <SectionHeading title="Choose your route" />
+      <SectionHeading title="Choose your route to Guindy" />
       <TouchableOpacity onPress={() => setSelectedRoute('safe')} activeOpacity={0.88} style={[styles.routeCard, selectedRoute === 'safe' && styles.routeCardSelected, { borderLeftColor: C.success }]}>
-        <View style={styles.routeHeader}><View><View style={styles.recommendedBadge}><Icon name="checkmark-circle" size={13} color={C.success} /><Text style={styles.recommendedText}>Recommended</Text></View><Text style={styles.routeTitle}>Safe route</Text></View><View style={[styles.radio, selectedRoute === 'safe' && styles.radioSelected]}>{selectedRoute === 'safe' ? <View style={styles.radioInner} /> : null}</View></View>
-        <Text style={styles.routeStats}>20 min  ·  12 km  ·  <Text style={{ color: C.success }}>Risk: Low</Text></Text>
-        <View style={styles.chipRow}><View style={styles.successChip}><Text style={styles.chipTextSuccess}>Low crime</Text></View><View style={styles.successChip}><Text style={styles.chipTextSuccess}>No accidents</Text></View><View style={styles.successChip}><Text style={styles.chipTextSuccess}>Safe network</Text></View></View>
+        <View style={styles.routeHeader}><View><View style={styles.recommendedBadge}><Icon name="checkmark-circle" size={13} color={C.success} /><Text style={styles.recommendedText}>Recommended</Text></View><Text style={styles.routeTitle}>Safest Route to Guindy</Text></View><View style={[styles.radio, selectedRoute === 'safe' && styles.radioSelected]}>{selectedRoute === 'safe' ? <View style={styles.radioInner} /> : null}</View></View>
+        <Text style={styles.routeStats}>22 min  ·  13.2 km  ·  <Text style={{ color: C.success }}>Risk: Low</Text></Text>
+        <View style={styles.chipRow}><View style={styles.successChip}><Text style={styles.chipTextSuccess}>Avoids Kathipara Accident</Text></View><View style={styles.successChip}><Text style={styles.chipTextSuccess}>Avoids Saidapet Crime</Text></View><View style={styles.successChip}><Text style={styles.chipTextSuccess}>Safe network</Text></View></View>
       </TouchableOpacity>
       <TouchableOpacity onPress={() => setSelectedRoute('fast')} activeOpacity={0.88} style={[styles.routeCard, selectedRoute === 'fast' && styles.routeCardSelected, { borderLeftColor: C.destructive }]}>
-        <View style={styles.routeHeader}><View><View style={styles.recommendedBadge}><Icon name="warning" size={13} color={C.destructive} /><Text style={styles.notRecommendedText}>Not recommended</Text></View><Text style={styles.routeTitle}>Fastest route</Text></View><View style={[styles.radio, selectedRoute === 'fast' && { borderColor: C.destructive }]}>{selectedRoute === 'fast' ? <View style={[styles.radioInner, { backgroundColor: C.destructive }]} /> : null}</View></View>
-        <Text style={styles.routeStats}>14 min  ·  9 km  ·  <Text style={{ color: C.destructive }}>Risk: High</Text></Text>
-        <View style={styles.chipRow}><View style={styles.dangerChip}><Text style={styles.chipTextDanger}>High crime</Text></View><View style={styles.dangerChip}><Text style={styles.chipTextDanger}>Accident zone</Text></View><View style={styles.dangerChip}><Text style={styles.chipTextDanger}>Unsafe network</Text></View></View>
+        <View style={styles.routeHeader}><View><View style={styles.recommendedBadge}><Icon name="warning" size={13} color={C.destructive} /><Text style={styles.notRecommendedText}>Not recommended</Text></View><Text style={styles.routeTitle}>Shortest Direct Route</Text></View><View style={[styles.radio, selectedRoute === 'fast' && { borderColor: C.destructive }]}>{selectedRoute === 'fast' ? <View style={[styles.radioInner, { backgroundColor: C.destructive }]} /> : null}</View></View>
+        <Text style={styles.routeStats}>16 min  ·  10.8 km  ·  <Text style={{ color: C.destructive }}>Risk: High</Text></Text>
+        <View style={styles.chipRow}><View style={styles.dangerChip}><Text style={styles.chipTextDanger}>Kathipara Accident Zone</Text></View><View style={styles.dangerChip}><Text style={styles.chipTextDanger}>Saidapet Crime Spot</Text></View><View style={styles.dangerChip}><Text style={styles.chipTextDanger}>Heavy Traffic</Text></View></View>
       </TouchableOpacity>
       <SectionHeading title="Emergency contacts" action="Manage" />
       <ContactRow initials="PS" name="Priya S." relation="Sister" />
