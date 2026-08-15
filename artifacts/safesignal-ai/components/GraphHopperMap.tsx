@@ -162,6 +162,7 @@ export function GraphHopperMap({
 <body>
   <div id="map"></div>
   <script>
+    var incidents = ${JSON.stringify(incidents || [])};
     var map = L.map('map', { zoomControl: false }).setView([${origin.lat}, ${origin.lng}], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
@@ -178,7 +179,7 @@ export function GraphHopperMap({
         var safeCoords = ${JSON.stringify(safeCoords)};
         var fastCoords = ${JSON.stringify(fastCoords)};
 
-        // Shortest Path - Red Dotted Line (#EF4444) passing through Pammal accident blockage
+        // Shortest Path - Red Dotted Line (#EF4444) passing through Pammal accident blockage & crime spot
         if (fastCoords && fastCoords.length > 0) {
           L.polyline(fastCoords, {
             color: '#EF4444',
@@ -249,6 +250,7 @@ export function GraphHopperMap({
     map.on('zoomend', updateZoomStyles);
 
     var accidentBlockageMarker = null;
+    var crimeMarker = null;
     if (incidents && incidents.length > 0) {
       var incidentBounds = [];
       var sosMarker = null;
@@ -259,19 +261,20 @@ export function GraphHopperMap({
         var badgeBg = '#D97706';
 
         var isAccidentBlockage = item.id === 'mock_accident_blockage_pammal' || (item.title && item.title.indexOf('Collision Blockage') !== -1);
+        var isCrime = item.category === 'Crime' || item.id === 'mock_crime_pammal_highway';
 
         if (item.id.indexOf('sos') !== -1 || (item.title && item.title.indexOf('SOS') !== -1)) {
           iconHtml = '🚨';
           pinClass = 'round-pin round-pin-sos';
           badgeBg = '#DC2626';
-        } else if (item.category === 'Crime') {
+        } else if (isCrime) {
           iconHtml = '🚨';
           pinClass = 'round-pin round-pin-crime';
           badgeBg = '#DC2626';
         } else if (item.category === 'Accident' || isAccidentBlockage) {
-          iconHtml = '🚨';
-          pinClass = 'round-pin round-pin-crime';
-          badgeBg = '#DC2626';
+          iconHtml = '⚠️';
+          pinClass = 'round-pin round-pin-accident';
+          badgeBg = '#EA580C';
         } else if (item.category === 'Cyber') {
           iconHtml = '🌐';
           pinClass = 'round-pin round-pin-cyber';
@@ -300,6 +303,16 @@ export function GraphHopperMap({
             '<div style="font-size:11px; color:#475569; margin-bottom:8px;">Shortest Direct Road Blocked • Police & Rescue Active</div>' +
             '<div style="background:#ecfdf5; border:1px solid #a7f3d0; color:#059669; font-size:11px; font-weight:700; padding:5px 8px; border-radius:6px; text-align:center;">⚡ SafeSignal AI Auto-Reroute Active (Detour)</div>' +
           '</div>';
+        } else if (isCrime) {
+          popupHtml = '<div style="background:#ffffff; border:1px solid #fca5a5; border-radius:12px; padding:12px 14px; box-shadow:0 8px 24px rgba(239,68,68,0.22); min-width:250px; font-family:sans-serif;">' +
+            '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">' +
+              '<span style="background:#fee2e2; color:#dc2626; font-size:10px; font-weight:800; padding:3px 8px; border-radius:6px; letter-spacing:0.5px;">🚨 HIGH CRIME ZONE</span>' +
+              '<span style="color:#dc2626; font-size:10px; font-weight:800;">THREAT 88%</span>' +
+            '</div>' +
+            '<div style="font-size:13px; font-weight:800; color:#991b1b; margin-bottom:4px;">' + cleanTitle + '</div>' +
+            '<div style="font-size:11px; color:#475569; margin-bottom:8px;">📍 ' + cleanSub + '</div>' +
+            '<div style="background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; font-size:11px; font-weight:700; padding:5px 8px; border-radius:6px; text-align:center;">⚠️ Robbery & Theft Spot on Shortest Road</div>' +
+          '</div>';
         } else {
           popupHtml = '<div style="font-family:sans-serif; min-width:190px; padding:2px;">' +
             '<div style="font-size:10px; font-weight:800; color:' + badgeBg + '; text-transform:uppercase; margin-bottom:3px; letter-spacing:0.5px;">' + iconHtml + ' ' + item.category + ' ALERT (' + cleanDistrict + ')</div>' +
@@ -312,6 +325,8 @@ export function GraphHopperMap({
         var marker = L.marker([item.lat, item.lng], { icon: markerIcon }).addTo(map).bindPopup(popupHtml);
         if (isAccidentBlockage) {
           accidentBlockageMarker = marker;
+        } else if (isCrime) {
+          crimeMarker = marker;
         }
         if (item.id.indexOf('sos') !== -1 || (item.title && item.title.indexOf('SOS') !== -1)) {
           sosMarker = marker;
