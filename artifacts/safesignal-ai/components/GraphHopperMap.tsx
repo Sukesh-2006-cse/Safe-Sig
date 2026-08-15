@@ -61,8 +61,10 @@ export function GraphHopperMap({
     async function fetchRouteMultiEngine() {
       setLoading(true);
       try {
-        // 1. Shortest Direct Route (Red Line passing through Pammal Accident)
-        const directUrl = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${destination!.lng},${destination!.lat}?overview=full&geometries=geojson`;
+        // 1. Shortest Direct Route (Red Line passing through Pammal Accident Spot)
+        const pammalLat = 12.9730;
+        const pammalLng = 80.1340;
+        const directUrl = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${pammalLng},${pammalLat};${destination!.lng},${destination!.lat}?overview=full&geometries=geojson`;
         const resDirect = await fetch(directUrl);
         let rawFast: [number, number][] = [];
         if (resDirect.ok) {
@@ -72,10 +74,10 @@ export function GraphHopperMap({
           }
         }
 
-        // 2. Safest Route (Emerald Green Detour North via Kovur / Porur)
-        const detourLat = 13.0180;
-        const detourLng = 80.1250;
-        const safeUrl = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${detourLng},${detourLat};${destination!.lng},${destination!.lat}?overview=full&geometries=geojson`;
+        // 2. Safest Detour Route (Emerald Green Solid Line detouring North via Kovur / Porur)
+        const porurLat = 13.0180;
+        const porurLng = 80.1250;
+        const safeUrl = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${porurLng},${porurLat};${destination!.lng},${destination!.lat}?overview=full&geometries=geojson`;
         const resSafe = await fetch(safeUrl);
         let rawSafe: [number, number][] = [];
         let distKm = '14.8 km';
