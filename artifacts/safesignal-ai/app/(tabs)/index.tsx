@@ -17,9 +17,10 @@ import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import colors from '@/constants/colors';
 import { GraphHopperMap, Coords } from '@/components/GraphHopperMap';
-import { GRAPHHOPPER_API_KEY } from '@/constants/config';
+import { GRAPHHOPPER_API_KEY, DEFAULT_ORIGIN } from '@/constants/config';
 import { useLocationAndRouting } from '@/hooks/useLocationAndRouting';
 import { fetchTamilNaduNewsIncidents, ThreatIncident, ThreatCategory } from '@/services/tamilNaduNewsService';
+import { saveIncidentsToMongoDB } from '@/services/mongoService';
 
 const C = colors.light;
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -478,22 +479,40 @@ function AlertsScreen({ filter, setFilter, onNavigate, topInset, incidents = [] 
   );
 }
 
-function EmergencyScreen({ onBack, topInset }: { onBack: () => void; topInset: number }) {
+function EmergencyScreen({ onBack, topInset, activeSos, onToggleSos }: { onBack: () => void; topInset: number; activeSos: boolean; onToggleSos: () => void }) {
   const pulse = useRef(new Animated.Value(0.55)).current;
-  const [sharing, setSharing] = useState(false);
   useEffect(() => {
     const animation = Animated.loop(Animated.sequence([
-      Animated.timing(pulse, { toValue: 1, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-      Animated.timing(pulse, { toValue: 0.55, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 1, duration: activeSos ? 400 : 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 0.55, duration: activeSos ? 400 : 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
     ]));
     animation.start();
     return () => animation.stop();
-  }, [pulse]);
+  }, [pulse, activeSos]);
   return (
     <View style={[styles.page, { paddingTop: topInset }]}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <TopBar title="Emergency" onBack={onBack} />
-        <View style={styles.sosHero}><Animated.View style={[styles.sosCircle, { opacity: pulse }]}><Text style={styles.sosText}>SOS</Text></Animated.View><Text style={styles.sosHint}>Tap to alert emergency contacts & share location</Text><Button label={sharing ? 'Live location shared' : 'Share live location'} variant="outline" icon="location" onPress={() => setSharing(!sharing)} /></View>
+        <View style={styles.sosHero}>
+          <TouchableOpacity activeOpacity={0.85} onPress={onToggleSos}>
+            <Animated.View style={[styles.sosCircle, { opacity: pulse, backgroundColor: activeSos ? '#DC2626' : C.destructive }]}>
+              <Text style={styles.sosText}>{activeSos ? 'SOS\nACTIVE' : 'SOS'}</Text>
+            </Animated.View>
+          </TouchableOpacity>
+          <Text style={[styles.sosHint, activeSos && { color: C.destructive, fontWeight: '700' }]}>
+            {activeSos
+              ? '🚨 EMERGENCY ACTIVE! Your location is mapped as Emergency SOS on SafeSignal Map'
+              : 'Tap to alert emergency contacts & share location'}
+          </Text>
+          {activeSos ? (
+            <TouchableOpacity style={styles.deactivateSosButton} onPress={onToggleSos} activeOpacity={0.8}>
+              <Icon name="close-circle" size={18} color="#FFFFFF" />
+              <Text style={styles.deactivateSosText}>Remove Emergency Pin (Deactivate SOS)</Text>
+            </TouchableOpacity>
+          ) : (
+            <Button label="Share live location & map SOS" variant="outline" icon="location" onPress={onToggleSos} />
+          )}
+        </View>
         <SectionHeading title="Emergency contacts" />
         <ContactRow initials="PS" name="Priya S." relation="Sister" />
         <ContactRow initials="RM" name="Rajan M." relation="Father" />
@@ -548,12 +567,52 @@ export default function SafeSignalHome() {
   const [danger, setDanger] = useState(false);
   const [alertFilter, setAlertFilter] = useState<string>('All');
   const [incidents, setIncidents] = useState<ThreatIncident[]>([]);
+  const [activeSos, setActiveSos] = useState<boolean>(false);
 
   useEffect(() => {
     fetchTamilNaduNewsIncidents().then((data) => {
       setIncidents(data);
     });
   }, []);
+
+  const toggleSos = () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => undefined);
+    const nextState = !activeSos;
+    setActiveSos(nextState);
+
+    if (nextState) {
+      const sosIncident: ThreatIncident = {
+        id: 'sos_active_pin',
+        title: '🚨 ACTIVE SOS EMERGENCY',
+        subtitle: 'Live Emergency Location Mapped',
+        category: 'Crime',
+        district: 'Chennai',
+        lat: DEFAULT_ORIGIN.lat,
+        lng: DEFAULT_ORIGIN.lng,
+        time: 'Live Emergency Now',
+        tone: 'danger',
+        sourceName: 'SafeSignal Emergency SOS',
+      };
+      saveIncidentsToMongoDB([sosIncident]).catch((e) => console.warn(e));
+    }
+  };
+
+  const activeSosIncident: ThreatIncident = {
+    id: 'sos_active_pin',
+    title: '🚨 ACTIVE SOS EMERGENCY',
+    subtitle: 'Live Emergency Location Mapped',
+    category: 'Crime',
+    district: 'Chennai',
+    lat: DEFAULT_ORIGIN.lat,
+    lng: DEFAULT_ORIGIN.lng,
+    time: 'Live Emergency Now',
+    tone: 'danger',
+    sourceName: 'SafeSignal Emergency SOS',
+  };
+
+  const displayIncidents = activeSos
+    ? [activeSosIncident, ...incidents.filter((i) => i.id !== 'sos_active_pin')]
+    : incidents.filter((i) => i.id !== 'sos_active_pin');
 
   const navigate = (next: Exclude<Screen, 'splash' | 'emergency'>) => {
     Haptics.selectionAsync().catch(() => undefined);
@@ -565,12 +624,12 @@ export default function SafeSignalHome() {
   };
 
   if (screen === 'splash') return <SplashScreen onStart={() => setScreen('home')} topInset={topInset} bottomInset={bottomInset} />;
-  if (screen === 'home') return <HomeScreen danger={danger} onToggleDanger={() => setDanger(!danger)} onNavigate={navigate} onEmergency={openEmergency} onNotification={() => navigate('alerts')} topInset={topInset} incidents={incidents} />;
-  if (screen === 'route') return <RouteScreen onNavigate={navigate} onBack={() => navigate('home')} onEmergency={openEmergency} topInset={topInset} incidents={incidents} />;
+  if (screen === 'home') return <HomeScreen danger={danger} onToggleDanger={() => setDanger(!danger)} onNavigate={navigate} onEmergency={openEmergency} onNotification={() => navigate('alerts')} topInset={topInset} incidents={displayIncidents} />;
+  if (screen === 'route') return <RouteScreen onNavigate={navigate} onBack={() => navigate('home')} onEmergency={openEmergency} topInset={topInset} incidents={displayIncidents} />;
   if (screen === 'scan') return <ScanScreen onNavigate={navigate} topInset={topInset} />;
-  if (screen === 'alerts') return <AlertsScreen filter={alertFilter} setFilter={setAlertFilter} onNavigate={navigate} topInset={topInset} incidents={incidents} />;
+  if (screen === 'alerts') return <AlertsScreen filter={alertFilter} setFilter={setAlertFilter} onNavigate={navigate} topInset={topInset} incidents={displayIncidents} />;
   if (screen === 'profile') return <ProfileScreen onNavigate={navigate} topInset={topInset} />;
-  return <EmergencyScreen onBack={() => navigate('home')} topInset={topInset} />;
+  return <EmergencyScreen onBack={() => navigate('home')} topInset={topInset} activeSos={activeSos} onToggleSos={toggleSos} />;
 }
 
 const styles = StyleSheet.create({
@@ -776,6 +835,27 @@ const styles = StyleSheet.create({
   sosCircle: { width: 140, height: 140, borderRadius: 70, backgroundColor: C.destructive, alignItems: 'center', justifyContent: 'center', shadowColor: C.destructive, shadowOpacity: 0.22, shadowRadius: 18, shadowOffset: { width: 0, height: 7 }, elevation: 7 },
   sosText: { fontFamily: 'Inter_700Bold', color: C.primaryForeground, fontSize: 32, letterSpacing: 2 },
   sosHint: { fontFamily: 'Inter_400Regular', color: C.mutedForeground, fontSize: 12, textAlign: 'center', marginTop: 17, marginBottom: 4 },
+  deactivateSosButton: {
+    backgroundColor: C.destructive,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginTop: 10,
+    shadowColor: C.destructive,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  deactivateSosText: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 13,
+    color: '#FFFFFF',
+  },
   contactRow: { backgroundColor: C.card, borderRadius: 14, borderWidth: 1, borderColor: C.border, padding: 12, flexDirection: 'row', alignItems: 'center', marginBottom: 9 },
   contactAvatar: { width: 42, height: 42, borderRadius: 14, backgroundColor: C.secondary, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
   contactInitials: { fontFamily: 'Inter_700Bold', fontSize: 13, color: C.primary },

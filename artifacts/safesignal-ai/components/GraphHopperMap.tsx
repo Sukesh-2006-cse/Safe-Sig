@@ -212,6 +212,17 @@ export function GraphHopperMap({
       background: radial-gradient(circle at 35% 35%, #F59E0B, #B45309);
       box-shadow: 0 0 12px rgba(245,158,11,0.7);
     }
+    .round-pin-sos {
+      background: radial-gradient(circle at 35% 35%, #DC2626, #7F1D1D) !important;
+      border: 3px solid #FFFFFF !important;
+      box-shadow: 0 0 16px #DC2626, 0 0 30px rgba(220, 38, 38, 0.8) !important;
+      animation: sosPulseRing 1.2s infinite alternate ease-in-out;
+      z-index: 10000 !important;
+    }
+    @keyframes sosPulseRing {
+      0% { transform: scale(1); box-shadow: 0 0 10px #DC2626; }
+      100% { transform: scale(1.35); box-shadow: 0 0 25px #DC2626, 0 0 45px rgba(220, 38, 38, 0.9); }
+    }
 
     /* Zoom Responsive Visibility */
     .zoom-hide-pins .tn-incident-marker {
@@ -356,7 +367,11 @@ export function GraphHopperMap({
         var pinClass = 'round-pin round-pin-hazard';
         var badgeBg = '#D97706';
 
-        if (item.category === 'Crime') {
+        if (item.id.indexOf('sos') !== -1 || (item.title && item.title.indexOf('SOS') !== -1)) {
+          iconHtml = '🚨';
+          pinClass = 'round-pin round-pin-sos';
+          badgeBg = '#DC2626';
+        } else if (item.category === 'Crime') {
           iconHtml = '🚨';
           pinClass = 'round-pin round-pin-crime';
           badgeBg = '#DC2626';
