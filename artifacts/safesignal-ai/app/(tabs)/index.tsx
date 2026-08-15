@@ -317,10 +317,41 @@ function HomeScreen({ danger, onToggleDanger, onNavigate, onEmergency, onNotific
         <View style={styles.homeRouteIcon}><Icon name="shield-checkmark" size={21} color={C.success} /></View><View style={styles.homeRouteCopy}><View style={styles.homeRouteTitleRow}><Text style={styles.homeRouteTitle}>Safest Route (Green)</Text><Text style={styles.homeRecommended}>RECOMMENDED</Text></View><Text style={styles.homeRouteMeta}>20 min  ·  13.8 km  ·  Via Kovur, Kolapakkam & Manapakkam</Text></View><View style={[styles.radio, selectedRoute === 'safe' && styles.radioSelected]}>{selectedRoute === 'safe' ? <View style={styles.radioInner} /> : null}</View>
       </TouchableOpacity>
       <TouchableOpacity onPress={() => setSelectedRoute('fast')} activeOpacity={0.88} style={[styles.homeRouteOption, selectedRoute === 'fast' && styles.homeRouteOptionFastSelected]}>
-        <View style={[styles.homeRouteIcon, styles.homeRouteIconFast]}><Icon name="flash" size={21} color={C.destructive} /></View><View style={styles.homeRouteCopy}><View style={styles.homeRouteTitleRow}><Text style={styles.homeRouteTitle}>Shortest Direct Route (Red Dotted)</Text><Text style={styles.homeNotRecommended}>HIGH RISK</Text></View><Text style={styles.homeRouteMeta}>16 min  ·  10.8 km  ·  Passes Pammal Accident Blockage Spot</Text></View><View style={[styles.radio, selectedRoute === 'fast' && { borderColor: C.destructive }]}>{selectedRoute === 'fast' ? <View style={[styles.radioInner, { backgroundColor: C.destructive }]} /> : null}</View>
+        <View style={[styles.homeRouteIcon, styles.homeRouteIconFast]}><Icon name="flash" size={21} color={C.destructive} /></View><View style={styles.homeRouteCopy}><View style={styles.homeRouteTitleRow}><Text style={styles.homeRouteTitle}>Shortest Direct Route (Red Dotted)</Text><Text style={styles.homeNotRecommended}>HIGH RISK</Text></View><Text style={styles.homeRouteMeta}>16 min  ·  10.8 km  ·  Passes Pammal Robbery Crime & Accident Spot</Text></View><View style={[styles.radio, selectedRoute === 'fast' && { borderColor: C.destructive }]}>{selectedRoute === 'fast' ? <View style={[styles.radioInner, { backgroundColor: C.destructive }]} /> : null}</View>
       </TouchableOpacity>
 
-      {showTripDetails ? <View style={styles.tripDetails}><View style={styles.tripDetail}><Icon name="shield-checkmark-outline" size={17} color={C.success} /><Text style={styles.tripDetailText}>Safest route detours around Pammal accident blockage</Text></View><View style={styles.tripDetail}><Icon name="wifi-outline" size={17} color={C.primary} /><Text style={styles.tripDetailText}>Safe network coverage across Chennai corridor</Text></View></View> : null}
+      {/* Time & Distance Comparison Card */}
+      <View style={{ backgroundColor: C.card, borderRadius: 14, padding: 14, marginVertical: 12, borderWidth: 1, borderColor: C.border }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+          <Icon name="git-compare-outline" size={18} color={C.primary} />
+          <Text style={{ fontSize: 14, fontWeight: '700', color: C.foreground }}>Route Time & Distance Comparison</Text>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: C.muted, borderRadius: 10, padding: 12, marginBottom: 10 }}>
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <Text style={{ fontSize: 10, fontWeight: '800', color: C.success, letterSpacing: 0.5, marginBottom: 2 }}>SAFEST (GREEN)</Text>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: C.success }}>20 mins</Text>
+            <Text style={{ fontSize: 11, fontWeight: '600', color: C.mutedForeground, marginTop: 2 }}>13.8 km  ·  Risk: Low</Text>
+          </View>
+          <View style={{ width: 1, height: 36, backgroundColor: C.border }} />
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <Text style={{ fontSize: 10, fontWeight: '800', color: C.destructive, letterSpacing: 0.5, marginBottom: 2 }}>SHORTEST (RED DOTTED)</Text>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: C.destructive }}>16 mins</Text>
+            <Text style={{ fontSize: 11, fontWeight: '600', color: C.destructive, marginTop: 2 }}>10.8 km  ·  Risk: High 88%</Text>
+          </View>
+        </View>
+        <View style={{ gap: 6 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#ECFDF5', paddingVertical: 6, paddingHorizontal: 10, borderRadius: 6 }}>
+            <Icon name="time-outline" size={14} color={C.success} />
+            <Text style={{ fontSize: 11, fontWeight: '700', color: '#059669' }}>+4 mins extra travel time for 94% higher route safety</Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#EFF6FF', paddingVertical: 6, paddingHorizontal: 10, borderRadius: 6 }}>
+            <Icon name="navigate-outline" size={14} color={C.primary} />
+            <Text style={{ fontSize: 11, fontWeight: '700', color: C.primary }}>+3.0 km detour completely bypasses Pammal crime & accident spots</Text>
+          </View>
+        </View>
+      </View>
+
+      {showTripDetails ? <View style={styles.tripDetails}><View style={styles.tripDetail}><Icon name="shield-checkmark-outline" size={17} color={C.success} /><Text style={styles.tripDetailText}>Safest route detours around Pammal crime & accident spot</Text></View><View style={styles.tripDetail}><Icon name="wifi-outline" size={17} color={C.primary} /><Text style={styles.tripDetailText}>Safe network coverage across Chennai corridor</Text></View></View> : null}
       <Button label={navigating ? 'End navigation' : `Start ${selectedRoute === 'safe' ? 'safest' : 'shortest'} Guindy navigation`} icon={navigating ? 'stop-circle-outline' : 'navigate'} variant={navigating ? 'danger' : 'primary'} onPress={() => setNavigating(!navigating)} />
       {navigating ? <View style={styles.navigationLive}><View style={styles.navigationLiveDot} /><Text style={styles.navigationLiveText}>Navigation active · Rechecking Kathipara & Saidapet threats</Text></View> : null}
 
@@ -391,7 +422,7 @@ function RouteScreen({ onNavigate, onBack, onEmergency, topInset, incidents = []
       <TouchableOpacity onPress={() => setSelectedRoute('fast')} activeOpacity={0.88} style={[styles.routeCard, selectedRoute === 'fast' && styles.routeCardSelected, { borderLeftColor: C.destructive }]}>
         <View style={styles.routeHeader}><View><View style={styles.recommendedBadge}><Icon name="warning" size={13} color={C.destructive} /><Text style={styles.notRecommendedText}>High Risk</Text></View><Text style={styles.routeTitle}>Shortest Direct Route (Red Dotted)</Text></View><View style={[styles.radio, selectedRoute === 'fast' && { borderColor: C.destructive }]}>{selectedRoute === 'fast' ? <View style={[styles.radioInner, { backgroundColor: C.destructive }]} /> : null}</View></View>
         <Text style={styles.routeStats}>16 min  ·  10.8 km  ·  <Text style={{ color: C.destructive }}>Risk: High 88%</Text></Text>
-        <View style={styles.chipRow}><View style={styles.dangerChip}><Text style={styles.chipTextDanger}>Anakaputhur</Text></View><View style={styles.dangerChip}><Text style={styles.chipTextDanger}>Pammal Accident</Text></View><View style={styles.dangerChip}><Text style={styles.chipTextDanger}>GST Road</Text></View></View>
+        <View style={styles.chipRow}><View style={styles.dangerChip}><Text style={styles.chipTextDanger}>Anakaputhur Crime</Text></View><View style={styles.dangerChip}><Text style={styles.chipTextDanger}>Pammal Accident</Text></View><View style={styles.dangerChip}><Text style={styles.chipTextDanger}>GST Road</Text></View></View>
       </TouchableOpacity>
       <SectionHeading title="Emergency contacts" action="Manage" />
       <ContactRow initials="PS" name="Priya S." relation="Sister" />
