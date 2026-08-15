@@ -53,7 +53,7 @@ export function GraphHopperMap({
       return;
     }
 
-    async function fetchGraphHopperRoute() {
+    async function fetchRouteMultiEngine() {
       const cacheKey = MapCache.getRouteKey(origin.lat, origin.lng, destination!.lat, destination!.lng, activeRouteType);
       const cachedRoute = MapCache.getCachedRoute(cacheKey);
 
@@ -70,52 +70,83 @@ export function GraphHopperMap({
 
       setLoading(true);
 
+      // Engine 1: GraphHopper API
       try {
-        const url = `https://graphhopper.com/api/1/route?point=${origin.lat},${origin.lng}&point=${destination!.lat},${destination!.lng}&profile=car&locale=en&key=${GRAPHHOPPER_API_KEY}&points_encoded=false`;
+        const ghUrl = `https://graphhopper.com/api/1/route?point=${origin.lat},${origin.lng}&point=${destination!.lat},${destination!.lng}&profile=car&locale=en&key=${GRAPHHOPPER_API_KEY}&points_encoded=false`;
 
-        const res = await fetch(url);
-        if (!res.ok) {
-          throw new Error(`GraphHopper API HTTP ${res.status}`);
-        }
+        const res = await fetch(ghUrl);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.paths && data.paths.length > 0) {
+            const path = data.paths[0];
+            const rawCoords: [number, number][] = path.points.coordinates.map(([lng, lat]: [number, number]) => [lat, lng]);
+            const distKm = (path.distance / 1000).toFixed(1);
+            const durMin = Math.round(path.time / (1000 * 60));
 
-        const data = await res.json();
-        if (data.paths && data.paths.length > 0) {
-          const path = data.paths[0];
-          const rawCoords: [number, number][] = path.points.coordinates.map(([lng, lat]: [number, number]) => [lat, lng]);
-          const distKm = (path.distance / 1000).toFixed(1);
-          const durMin = Math.round(path.time / (1000 * 60));
-
-          if (isMounted) {
-            setRouteCoordinates(rawCoords);
-            const info = { distanceKm: `${distKm} km`, durationMin: durMin };
-            setRouteInfo(info);
-            onRouteLoaded?.(info);
-            MapCache.setCachedRoute(cacheKey, {
-              coordinates: rawCoords,
-              distanceKm: `${distKm} km`,
-              durationMin: durMin,
-            });
-            setLoading(false);
+            if (isMounted) {
+              setRouteCoordinates(rawCoords);
+              const info = { distanceKm: `${distKm} km`, durationMin: durMin };
+              setRouteInfo(info);
+              onRouteLoaded?.(info);
+              MapCache.setCachedRoute(cacheKey, {
+                coordinates: rawCoords,
+                distanceKm: `${distKm} km`,
+                durationMin: durMin,
+              });
+              setLoading(false);
+              return;
+            }
           }
-        } else {
-          throw new Error('No route paths returned');
         }
       } catch (err: any) {
-        console.warn('GraphHopper fetch error, using direct polyline:', err?.message);
-        if (isMounted && destination) {
-          const fallbackCoords: [number, number][] = [
-            [origin.lat, origin.lng],
-            [(origin.lat + destination.lat) / 2, (origin.lng + destination.lng) / 2],
-            [destination.lat, destination.lng],
-          ];
-          setRouteCoordinates(fallbackCoords);
-          setRouteInfo({ distanceKm: 'Direct Route', durationMin: 15 });
-          setLoading(false);
+        console.warn('GraphHopper route warning, trying OSRM fallback:', err?.message);
+      }
+
+      // Engine 2: OSRM Public Driving Router (High Performance & Zero Quota Limit)
+      try {
+        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${destination!.lng},${destination!.lat}?overview=full&geometries=geojson`;
+        const res = await fetch(osrmUrl);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.routes && data.routes.length > 0) {
+            const route = data.routes[0];
+            const rawCoords: [number, number][] = route.geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng]);
+            const distKm = (route.distance / 1000).toFixed(1);
+            const durMin = Math.round(route.duration / 60);
+
+            if (isMounted) {
+              setRouteCoordinates(rawCoords);
+              const info = { distanceKm: `${distKm} km`, durationMin: durMin };
+              setRouteInfo(info);
+              onRouteLoaded?.(info);
+              MapCache.setCachedRoute(cacheKey, {
+                coordinates: rawCoords,
+                distanceKm: `${distKm} km`,
+                durationMin: durMin,
+              });
+              setLoading(false);
+              return;
+            }
+          }
         }
+      } catch (err: any) {
+        console.warn('OSRM router warning:', err?.message);
+      }
+
+      // Fallback: Direct Segment Polyline
+      if (isMounted && destination) {
+        const fallbackCoords: [number, number][] = [
+          [origin.lat, origin.lng],
+          [(origin.lat + destination.lat) / 2, (origin.lng + destination.lng) / 2],
+          [destination.lat, destination.lng],
+        ];
+        setRouteCoordinates(fallbackCoords);
+        setRouteInfo({ distanceKm: 'Direct Route', durationMin: 15 });
+        setLoading(false);
       }
     }
 
-    fetchGraphHopperRoute();
+    fetchRouteMultiEngine();
     return () => { isMounted = false; };
   }, [origin.lat, origin.lng, destination?.lat, destination?.lng, activeRouteType, hasDestination]);
 
