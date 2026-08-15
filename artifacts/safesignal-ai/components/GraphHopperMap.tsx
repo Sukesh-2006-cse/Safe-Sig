@@ -340,30 +340,6 @@ export function GraphHopperMap({
           });
           L.marker(routeCoords[routeCoords.length - 1], { icon: endIcon }).addTo(map).bindPopup('<b>Destination:</b> ${destination?.name ? destination.name.replace(/'/g, "\\'") : 'Destination'}');
 
-          ${
-            activeRouteType === 'safe'
-              ? `
-              var midIdx = Math.floor(routeCoords.length / 2);
-              var safeIcon = L.divIcon({
-                className: 'custom-badge',
-                html: '🛡️ Safe Zone',
-                iconSize: [80, 24],
-                iconAnchor: [40, 12]
-              });
-              L.marker(routeCoords[midIdx], { icon: safeIcon }).addTo(map);
-              `
-              : `
-              var midIdx = Math.floor(routeCoords.length / 2);
-              var threatIcon = L.divIcon({
-                className: 'threat-badge',
-                html: '⚠️',
-                iconSize: [24, 24],
-                iconAnchor: [12, 12]
-              });
-              L.marker(routeCoords[midIdx], { icon: threatIcon }).addTo(map).bindPopup('<b>High Risk Zone:</b> Crime & Unsafe Wi-Fi reported');
-              `
-          }
-
           map.fitBounds(polyline.getBounds(), { padding: [28, 28] });
         } else {
           map.setView([${origin.lat}, ${origin.lng}], 15);
