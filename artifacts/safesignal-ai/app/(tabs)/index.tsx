@@ -16,6 +16,9 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import colors from '@/constants/colors';
+import { GraphHopperMap, Coords } from '@/components/GraphHopperMap';
+import { GRAPHHOPPER_API_KEY } from '@/constants/config';
+import { useLocationAndRouting } from '@/hooks/useLocationAndRouting';
 
 const C = colors.light;
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -97,13 +100,9 @@ function SectionHeading({ title, action }: { title: string; action?: string }) {
   );
 }
 
-function MapPlaceholder() {
+function MapPlaceholder({ routeType = 'safe', height = 220 }: { routeType?: 'safe' | 'fast'; height?: number }) {
   return (
-    <View style={styles.mapPlaceholder}>
-      <View style={styles.mapIconCircle}><Icon name="map-outline" size={28} color={C.mutedForeground} /></View>
-      <Text style={styles.mapTitle}>Map integration coming soon</Text>
-      <Text style={styles.mapSubtitle}>Your safer route will appear here</Text>
-    </View>
+    <GraphHopperMap routeType={routeType} height={height} />
   );
 }
 
@@ -190,7 +189,21 @@ function Page({ children, active, onNavigate, topInset, scroll = true }: { child
 }
 
 function HomeScreen({ danger, onToggleDanger, onNavigate, onEmergency, onNotification, topInset }: { danger: boolean; onToggleDanger: () => void; onNavigate: (screen: Exclude<Screen, 'splash' | 'emergency'>) => void; onEmergency: () => void; onNotification: () => void; topInset: number }) {
-  const [destination, setDestination] = useState('Indiranagar, Bengaluru');
+  const {
+    sourceText,
+    setSourceText,
+    destinationText,
+    setDestinationText,
+    originCoords,
+    destinationCoords,
+    isGeocodingSource,
+    isGeocodingDest,
+    gpsStatus,
+    useCurrentGpsAsSource,
+    swapLocations,
+    geocodeSource,
+    geocodeDestination,
+  } = useLocationAndRouting('Current location (GPS)', '');
   const [selectedRoute, setSelectedRoute] = useState<'safe' | 'fast'>('safe');
   const [navigating, setNavigating] = useState(false);
   const [showTripDetails, setShowTripDetails] = useState(false);
@@ -216,14 +229,85 @@ function HomeScreen({ danger, onToggleDanger, onNavigate, onEmergency, onNotific
       </TouchableOpacity>
 
       <View style={styles.routeSearchCard}>
-        <View style={styles.routeSearchTitleRow}><View><Text style={styles.routeSearchEyebrow}>SAFE ROUTE PLANNER</Text><Text style={styles.routeSearchTitle}>Where are you going?</Text></View><View style={styles.routeSearchIcon}><Icon name="navigate" size={20} color={C.primary} /></View></View>
-        <View style={styles.routeHomeInput}><View style={styles.routeInputRail}><View style={styles.routeInputDot} /><View style={styles.routeInputLine} /><View style={[styles.routeInputDot, styles.routeInputDotEnd]} /></View><View style={styles.routeInputCopy}><Text style={styles.routeInputLabel}>FROM</Text><Text style={styles.routeInputValue}>Current location</Text><View style={styles.routeLiveTag}><View style={styles.liveDot} /><Text style={styles.liveText}>Live</Text></View><Text style={[styles.routeInputLabel, styles.routeToLabel]}>TO</Text><TextInput value={destination} onChangeText={setDestination} placeholder="Enter destination" placeholderTextColor={C.mutedForeground} style={styles.routeHomeTextInput} /></View></View>
+        <View style={styles.routeSearchTitleRow}>
+          <View>
+            <Text style={styles.routeSearchEyebrow}>SAFE ROUTE PLANNER</Text>
+            <Text style={styles.routeSearchTitle}>Where are you going?</Text>
+          </View>
+          <TouchableOpacity onPress={swapLocations} style={styles.routeSearchIcon}>
+            <Icon name="swap-vertical" size={20} color={C.primary} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.routeHomeInput}>
+          <View style={styles.routeInputRail}>
+            <View style={styles.routeInputDot} />
+            <View style={styles.routeInputLine} />
+            <View style={[styles.routeInputDot, styles.routeInputDotEnd]} />
+          </View>
+          <View style={styles.routeInputCopy}>
+            <Text style={styles.routeInputLabel}>FROM (SOURCE)</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <TextInput
+                value={sourceText}
+                onChangeText={setSourceText}
+                placeholder="Enter source location or city"
+                placeholderTextColor={C.mutedForeground}
+                style={[styles.routeHomeTextInput, { flex: 1 }]}
+              />
+              <TouchableOpacity onPress={useCurrentGpsAsSource} style={styles.routeLiveTag}>
+                <View style={styles.liveDot} />
+                <Text style={styles.liveText}>GPS</Text>
+              </TouchableOpacity>
+            </View>
+            {isGeocodingSource ? <ActivityIndicator size="small" color={C.primary} style={{ alignSelf: 'flex-start', marginVertical: 2 }} /> : null}
+
+            <Text style={[styles.routeInputLabel, styles.routeToLabel]}>TO (DESTINATION)</Text>
+            <TextInput
+              value={destinationText}
+              onChangeText={setDestinationText}
+              onSubmitEditing={() => {
+                geocodeSource(sourceText);
+                geocodeDestination(destinationText);
+              }}
+              placeholder="Enter destination (e.g. Indiranagar, Airport)"
+              placeholderTextColor={C.mutedForeground}
+              style={styles.routeHomeTextInput}
+            />
+            {isGeocodingDest ? <ActivityIndicator size="small" color={C.primary} style={{ alignSelf: 'flex-start', marginVertical: 2 }} /> : null}
+
+            <TouchableOpacity
+              onPress={() => {
+                geocodeSource(sourceText);
+                geocodeDestination(destinationText);
+              }}
+              style={{
+                backgroundColor: C.primary,
+                paddingVertical: 7,
+                paddingHorizontal: 12,
+                borderRadius: 8,
+                alignSelf: 'flex-end',
+                marginTop: 8,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 5,
+              }}
+              activeOpacity={0.8}
+            >
+              <Icon name="search" size={13} color="#FFFFFF" />
+              <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 12 }}>Update Route</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
 
       <View style={styles.homeMapPreview}>
-        <View style={styles.mapPreviewTop}><View style={styles.mapPreviewStatus}><View style={styles.mapPreviewStatusDot} /><Text style={styles.mapPreviewStatusText}>Safety map preview</Text></View><TouchableOpacity onPress={() => setShowTripDetails(!showTripDetails)} style={styles.mapPreviewControl}><Icon name={showTripDetails ? 'contract' : 'expand'} size={17} color={C.foreground} /></TouchableOpacity></View>
-        <View style={styles.routeVisual}><View style={styles.routeVisualLineBack} /><View style={styles.routeVisualLine} /><View style={styles.routeStartDot}><Icon name="location" size={13} color={C.primaryForeground} /></View><View style={styles.routeEndDot}><Icon name="flag" size={13} color={C.primaryForeground} /></View><View style={styles.routeVisualLabel}><Icon name="shield-checkmark" size={13} color={C.success} /><Text style={styles.routeVisualLabelText}>Low-risk corridor</Text></View></View>
-        <View style={styles.mapPreviewBottom}><View><Text style={styles.mapPreviewDistance}>12 km</Text><Text style={styles.mapPreviewMeta}>20 min via safe route</Text></View><View style={styles.mapPlaceholderMini}><Icon name="map-outline" size={15} color={C.mutedForeground} /><Text style={styles.mapMiniText}>Map coming soon</Text></View></View>
+        <View style={styles.mapPreviewTop}>
+          <View style={styles.mapPreviewStatus}>
+            <View style={styles.mapPreviewStatusDot} />
+            <Text style={styles.mapPreviewStatusText}>Live GraphHopper map</Text>
+          </View>
+        </View>
+        <GraphHopperMap origin={originCoords} destination={destinationCoords} routeType={selectedRoute} height={200} />
       </View>
 
       <View style={styles.bestRouteHeading}><View><Text style={styles.sectionTitle}>Best route for you</Text><Text style={styles.bestRouteSub}>Prioritizing safety over speed</Text></View><View style={styles.routeScore}><Icon name="shield-checkmark" size={14} color={C.success} /><Text style={styles.routeScoreText}>92 safety score</Text></View></View>
@@ -248,16 +332,49 @@ function HomeScreen({ danger, onToggleDanger, onNavigate, onEmergency, onNotific
 }
 
 function RouteScreen({ onNavigate, onBack, onEmergency, topInset }: { onNavigate: (screen: Exclude<Screen, 'splash' | 'emergency'>) => void; onBack: () => void; onEmergency: () => void; topInset: number }) {
-  const [destination, setDestination] = useState('');
+  const {
+    sourceText,
+    setSourceText,
+    destinationText,
+    setDestinationText,
+    originCoords,
+    destinationCoords,
+    isGeocodingSource,
+    isGeocodingDest,
+    useCurrentGpsAsSource,
+  } = useLocationAndRouting('Current location (GPS)', '');
   const [selectedRoute, setSelectedRoute] = useState<'safe' | 'fast'>('safe');
   return (
     <Page active="route" onNavigate={onNavigate} topInset={topInset}>
       <TopBar title="Plan safe route" onBack={onBack} right={<TouchableOpacity onPress={onEmergency} style={styles.routeHeaderSos}><Icon name="alert-circle" size={19} color={C.destructive} /></TouchableOpacity>} />
       <View style={styles.inputStack}>
-        <View style={styles.inputShell}><Icon name="location" size={18} color={C.primary} /><Text style={styles.inputText}>Current location</Text><View style={styles.livePill}><View style={styles.liveDot} /><Text style={styles.liveText}>Live</Text></View></View>
-        <View style={styles.inputShell}><Icon name="flag" size={18} color={C.mutedForeground} /><TextInput value={destination} onChangeText={setDestination} placeholder="Enter destination" placeholderTextColor={C.mutedForeground} style={styles.textInput} /></View>
+        <View style={styles.inputShell}>
+          <Icon name="location" size={18} color={C.primary} />
+          <TextInput
+            value={sourceText}
+            onChangeText={setSourceText}
+            placeholder="Enter source location"
+            placeholderTextColor={C.mutedForeground}
+            style={styles.textInput}
+          />
+          <TouchableOpacity onPress={useCurrentGpsAsSource} style={styles.livePill}>
+            <View style={styles.liveDot} />
+            <Text style={styles.liveText}>GPS</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.inputShell}>
+          <Icon name="flag" size={18} color={C.mutedForeground} />
+          <TextInput
+            value={destinationText}
+            onChangeText={setDestinationText}
+            placeholder="Enter destination (e.g. Indiranagar, Airport)"
+            placeholderTextColor={C.mutedForeground}
+            style={styles.textInput}
+          />
+          {isGeocodingDest ? <ActivityIndicator size="small" color={C.primary} /> : null}
+        </View>
       </View>
-      <MapPlaceholder />
+      <GraphHopperMap origin={originCoords} destination={destinationCoords} routeType={selectedRoute} height={230} />
       <TouchableOpacity onPress={onEmergency} activeOpacity={0.84} style={styles.routeEmergencyBanner}>
         <View style={styles.routeEmergencyIcon}><Icon name="alert-circle" size={23} color={C.primaryForeground} /></View>
         <View style={styles.routeEmergencyCopy}><Text style={styles.routeEmergencyTitle}>Need help on this trip?</Text><Text style={styles.routeEmergencySubtitle}>Emergency contacts and nearby services are ready</Text></View>
