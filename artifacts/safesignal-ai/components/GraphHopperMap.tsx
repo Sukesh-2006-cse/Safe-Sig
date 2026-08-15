@@ -58,35 +58,57 @@ export function GraphHopperMap({
       return;
     }
 
-    const defaultKundrathurToGuindySafe: [number, number][] = [
+    const isTNagar = (destination?.name || '').toLowerCase().includes('t. nagar') || (destination?.name || '').toLowerCase().includes('t nagar') || (destination?.lat && destination.lat > 13.03);
+
+    const defaultGuindySafe: [number, number][] = [
+      [origin.lat, origin.lng],
       [12.9810, 80.0520],
       [12.9910, 80.0620],
       [13.0030, 80.0880],
       [13.0130, 80.1010],
-      [13.0120, 80.1310],
       [13.0160, 80.1610],
-      [13.0180, 80.1850],
-      [13.0067, 80.2020],
+      [destination?.lat || 13.0067, destination?.lng || 80.2020],
     ];
 
-    const defaultKundrathurToGuindyFast: [number, number][] = [
-      [12.9810, 80.0520],
+    const defaultGuindyFast: [number, number][] = [
+      [origin.lat, origin.lng],
       [12.9800, 80.0900],
       [12.9750, 80.1180],
       [12.9715, 80.1340],
-      [12.9690, 80.1470],
       [12.9840, 80.1650],
-      [12.9980, 80.1910],
-      [13.0067, 80.2020],
+      [destination?.lat || 13.0067, destination?.lng || 80.2020],
     ];
+
+    const defaultTNagarSafe: [number, number][] = [
+      [origin.lat, origin.lng],
+      [12.9880, 80.1350],
+      [13.0160, 80.1610],
+      [13.0250, 80.1900],
+      [13.0330, 80.2100],
+      [13.0380, 80.2230],
+      [destination?.lat || 13.0418, destination?.lng || 80.2341],
+    ];
+
+    const defaultTNagarFast: [number, number][] = [
+      [origin.lat, origin.lng],
+      [12.9910, 80.1450],
+      [13.0430, 80.1880],
+      [13.0510, 80.2120],
+      [13.0490, 80.2250],
+      [13.0425, 80.2310],
+      [destination?.lat || 13.0418, destination?.lng || 80.2341],
+    ];
+
+    const defaultFallbackFast = isTNagar ? defaultTNagarFast : defaultGuindyFast;
+    const defaultFallbackSafe = isTNagar ? defaultTNagarSafe : defaultGuindySafe;
 
     async function fetchRouteMultiEngine() {
       setLoading(true);
       try {
-        // 1. Shortest Direct Route (Direct Kundrathur -> Guindy via Pammal Main Road)
+        // 1. Shortest Direct Route (Direct OSRM driving query to target destination)
         const directUrl = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${destination!.lng},${destination!.lat}?overview=full&geometries=geojson`;
         const resDirect = await fetch(directUrl);
-        let rawFast: [number, number][] = defaultKundrathurToGuindyFast;
+        let rawFast: [number, number][] = defaultFallbackFast;
         if (resDirect.ok) {
           const dataDirect = await resDirect.json();
           if (dataDirect.routes && dataDirect.routes.length > 0) {
@@ -94,12 +116,12 @@ export function GraphHopperMap({
           }
         }
 
-        // 2. Safest Detour Route (Emerald Green Solid Line passing through Kolapakkam & Manapakkam)
-        const manapakkamLat = 13.0160;
-        const manapakkamLng = 80.1610;
-        const safeUrl = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${manapakkamLng},${manapakkamLat};${destination!.lng},${destination!.lat}?overview=full&geometries=geojson`;
+        // 2. Safest Detour Route (Emerald Green Solid Line passing via safe detour waypoint)
+        const detourLng = isTNagar ? 80.1900 : 80.1610;
+        const detourLat = isTNagar ? 13.0250 : 13.0160;
+        const safeUrl = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${detourLng},${detourLat};${destination!.lng},${destination!.lat}?overview=full&geometries=geojson`;
         const resSafe = await fetch(safeUrl);
-        let rawSafe: [number, number][] = defaultKundrathurToGuindySafe;
+        let rawSafe: [number, number][] = defaultFallbackSafe;
         let distKm = '13.8 km';
         let durMin = 20;
 
@@ -125,9 +147,9 @@ export function GraphHopperMap({
       } catch (err: any) {
         console.warn('Dual route fetch warning:', err);
         if (isMounted) {
-          setFastCoords(defaultKundrathurToGuindyFast);
-          setSafeCoords(defaultKundrathurToGuindySafe);
-          setRouteCoordinates(activeRouteType === 'safe' ? defaultKundrathurToGuindySafe : defaultKundrathurToGuindyFast);
+          setFastCoords(defaultFallbackFast);
+          setSafeCoords(defaultFallbackSafe);
+          setRouteCoordinates(activeRouteType === 'safe' ? defaultFallbackSafe : defaultFallbackFast);
           setLoading(false);
         }
       }
@@ -185,19 +207,29 @@ export function GraphHopperMap({
         var safeCoords = ${JSON.stringify(safeCoords)};
         var fastCoords = ${JSON.stringify(fastCoords)};
 
-        // Shortest Path - Red Dotted Line (#EF4444) passing through Pammal accident blockage & crime spot
+        var fastPoly = null;
+        var safePoly = null;
+
+        // Shortest Direct Path - Red Dotted Line (#DC2626) passing Arcot Rd, Vadapalani & Kodambakkam
         if (fastCoords && fastCoords.length > 0) {
-          L.polyline(fastCoords, {
-            color: '#EF4444',
-            weight: 5,
-            opacity: ${activeRouteType === 'fast' ? 0.95 : 0.55},
-            dashArray: '8, 8',
+          fastPoly = L.polyline(fastCoords, {
+            color: '#DC2626',
+            weight: 6,
+            opacity: 0.95,
+            dashArray: '10, 8',
             lineCap: 'round',
             lineJoin: 'round'
           }).addTo(map);
+
+          fastPoly.bindPopup(
+            '<div style="font-family:sans-serif; min-width:210px;">' +
+              '<b style="color:#DC2626;">🚨 SHORTEST DIRECT ROUTE (HIGH CRIME RISK)</b><br/>' +
+              '<span style="font-size:11px; color:#475569;">Passes through Arcot Road & Vadapalani crime hotspots in between to T. Nagar.</span>' +
+            '</div>'
+          );
         }
 
-        // Safest Path - Emerald Green Line (#10B981) passing through Kolapakkam & Manapakkam
+        // Safest Detour Path - Emerald Green Line (#10B981)
         if (safeCoords && safeCoords.length > 0) {
           L.polyline(safeCoords, {
             color: '#059669',
@@ -207,7 +239,7 @@ export function GraphHopperMap({
             lineJoin: 'round'
           }).addTo(map);
 
-          var safePoly = L.polyline(safeCoords, {
+          safePoly = L.polyline(safeCoords, {
             color: '#10B981',
             weight: 6,
             opacity: 0.95,
@@ -215,24 +247,36 @@ export function GraphHopperMap({
             lineJoin: 'round'
           }).addTo(map);
 
-          var startIcon = L.divIcon({
-            className: 'start-marker',
-            html: '<div style="background:#2563EB; width:18px; height:18px; border-radius:50%; border:3px solid #ffffff; box-shadow:0 2px 8px rgba(0,0,0,0.3);"></div>',
-            iconSize: [18, 18],
-            iconAnchor: [9, 9]
-          });
-          L.marker(safeCoords[0] || [${origin.lat}, ${origin.lng}], { icon: startIcon }).addTo(map).bindPopup('<b>Start:</b> Kundrathur');
+          safePoly.bindPopup(
+            '<div style="font-family:sans-serif; min-width:210px;">' +
+              '<b style="color:#059669;">⚡ RECOMMENDED SAFEST DETOUR ROUTE</b><br/>' +
+              '<span style="font-size:11px; color:#475569;">Bypasses Arcot Road & Vadapalani crime spots via Ramapuram & Ashok Nagar.</span>' +
+            '</div>'
+          );
+        }
 
-          var endIcon = L.divIcon({
-            className: 'end-marker',
-            html: '<div style="background:#10B981; width:20px; height:20px; border-radius:50%; border:3px solid #ffffff; box-shadow:0 2px 8px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center;"><span style="color:#fff; font-size:10px; font-weight:bold;">🏁</span></div>',
-            iconSize: [20, 20],
-            iconAnchor: [10, 10]
-          });
-          L.marker(safeCoords[safeCoords.length - 1] || [${destination?.lat}, ${destination?.lng}], { icon: endIcon }).addTo(map).bindPopup('<b>Destination:</b> Guindy');
+        var startIcon = L.divIcon({
+          className: 'start-marker',
+          html: '<div style="background:#2563EB; width:20px; height:20px; border-radius:50%; border:3px solid #ffffff; box-shadow:0 2px 8px rgba(0,0,0,0.4);"></div>',
+          iconSize: [20, 20],
+          iconAnchor: [10, 10]
+        });
+        L.marker(safeCoords[0] || [${origin.lat}, ${origin.lng}], { icon: startIcon }).addTo(map).bindPopup('<b>Start:</b> ' + ${JSON.stringify(origin.name || 'Current Location')});
 
-          var activePoly = '${activeRouteType}' === 'fast' ? L.polyline(fastCoords) : safePoly;
-          map.fitBounds(activePoly.getBounds(), { padding: [32, 32] });
+        var endIcon = L.divIcon({
+          className: 'end-marker',
+          html: '<div style="background:#10B981; width:22px; height:22px; border-radius:50%; border:3px solid #ffffff; box-shadow:0 2px 8px rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center;"><span style="color:#fff; font-size:11px; font-weight:bold;">🏁</span></div>',
+          iconSize: [22, 22],
+          iconAnchor: [11, 11]
+        });
+        L.marker(safeCoords[safeCoords.length - 1] || [${destination?.lat}, ${destination?.lng}], { icon: endIcon }).addTo(map).bindPopup('<b>Destination:</b> ' + ${JSON.stringify(destination?.name || 'T. Nagar')});
+
+        // Fit map bounds to show BOTH the safe route and the red dotted crime route in between to T. Nagar
+        var boundsGroup = L.featureGroup();
+        if (safePoly) boundsGroup.addLayer(safePoly);
+        if (fastPoly) boundsGroup.addLayer(fastPoly);
+        if (boundsGroup.getLayers().length > 0) {
+          map.fitBounds(boundsGroup.getBounds(), { padding: [36, 36] });
         }
         `
     }
@@ -267,7 +311,7 @@ export function GraphHopperMap({
         var badgeBg = '#D97706';
 
         var isAccidentBlockage = item.id === 'mock_accident_blockage_pammal' || (item.title && item.title.indexOf('Collision Blockage') !== -1);
-        var isCrime = item.category === 'Crime' || item.id === 'mock_crime_pammal_highway';
+        var isCrime = item.category === 'Crime' || (item.id && item.id.indexOf('crime') !== -1) || (item.title && item.title.indexOf('Crime') !== -1) || (item.title && item.title.indexOf('Robbery') !== -1);
 
         if (item.id.indexOf('sos') !== -1 || (item.title && item.title.indexOf('SOS') !== -1)) {
           iconHtml = '🚨';
@@ -344,9 +388,8 @@ export function GraphHopperMap({
       if (sosMarker && sosCoords) {
         map.setView(sosCoords, 16);
         setTimeout(function() { sosMarker.openPopup(); }, 300);
-      } else if (!${hasDestination} && incidentBounds.length > 0) {
-        var bounds = L.latLngBounds(incidentBounds);
-        map.fitBounds(bounds, { padding: [36, 36], maxZoom: 13 });
+      } else if (!${hasDestination}) {
+        map.setView([${origin.lat}, ${origin.lng}], 14);
       }
     }
   </script>

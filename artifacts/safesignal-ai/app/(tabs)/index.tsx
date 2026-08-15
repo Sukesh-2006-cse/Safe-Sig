@@ -49,6 +49,100 @@ const alerts: AlertItem[] = [
   { icon: 'bulb', title: 'Low Light Zone', subtitle: 'Poorly lit area ahead', category: 'Physical', distance: '1km ahead', time: '1 hr ago', tone: 'yellow' },
 ];
 
+function getDestinationCrimeIncidents(destinationName: string = '', origin?: Coords): ThreatIncident[] {
+  const clean = (destinationName || '').toLowerCase().trim();
+  const originLat = origin?.lat || DEFAULT_ORIGIN.lat;
+  const originLng = origin?.lng || DEFAULT_ORIGIN.lng;
+  const originName = origin?.name || 'Your Nearby Location';
+
+  const localCrimeIncident: ThreatIncident = {
+    id: 'mock_nearby_crime_local',
+    title: '🚨 Nearby High Crime & Robbery Spot',
+    subtitle: '450m from your current location • Threat Risk 86%',
+    category: 'Crime' as ThreatCategory,
+    district: originName,
+    lat: originLat + 0.0035,
+    lng: originLng + 0.0045,
+    time: '5 mins ago',
+    tone: 'danger' as const,
+    sourceName: 'SafeSignal Crime Scanner',
+  };
+
+  const localHazardIncident: ThreatIncident = {
+    id: 'mock_nearby_hazard_local',
+    title: '⚠️ Poorly Lit Street & Theft Hazard',
+    subtitle: '600m from your location • Caution Advised',
+    category: 'Hazard' as ThreatCategory,
+    district: originName,
+    lat: originLat - 0.0030,
+    lng: originLng - 0.0040,
+    time: '15 mins ago',
+    tone: 'warning' as const,
+    sourceName: 'SafeSignal Threat Monitor',
+  };
+
+  if (clean.includes('t. nagar') || clean.includes('t nagar')) {
+    return [
+      localCrimeIncident,
+      localHazardIncident,
+      {
+        id: 'mock_crime_vadapalani_corridor',
+        title: '🚨 High Crime Zone: Arcot Road Robbery Spot',
+        subtitle: 'Arcot Road - Vadapalani Direct Route • Threat 88%',
+        category: 'Crime' as ThreatCategory,
+        district: 'Vadapalani / Arcot Road Corridor',
+        lat: 13.0480,
+        lng: 80.2050,
+        time: '10 mins ago',
+        tone: 'danger' as const,
+        sourceName: 'SafeSignal Crime Scanner',
+      },
+    ];
+  }
+
+  if (clean.includes('guindy')) {
+    return [
+      localCrimeIncident,
+      localHazardIncident,
+      {
+        id: 'mock_crime_pammal_highway',
+        title: '🚨 Highway Robbery & Theft Spot',
+        subtitle: 'Anakaputhur / Pammal Main Road • High Crime Threat 88%',
+        category: 'Crime' as ThreatCategory,
+        district: 'Pammal Main Road SH 113A',
+        lat: 12.9772,
+        lng: 80.1240,
+        time: '15 mins ago',
+        tone: 'danger' as const,
+        sourceName: 'SafeSignal Crime Scanner',
+      },
+    ];
+  }
+
+  // Default: Return nearby crime & hazard pins around current location
+  return [localCrimeIncident, localHazardIncident];
+}
+
+function getCombinedMapIncidents(
+  destinationName: string = '',
+  origin?: Coords,
+  liveIncidents: ThreatIncident[] = []
+): ThreatIncident[] {
+  const routeIncidents = getDestinationCrimeIncidents(destinationName, origin);
+  const combined = [...routeIncidents, ...liveIncidents];
+
+  const seen = new Set<string>();
+  const result: ThreatIncident[] = [];
+  for (const item of combined) {
+    const key = (item.title || item.id || '').toLowerCase().trim();
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push(item);
+    }
+  }
+  return result;
+}
+
 const navItems: Array<{ id: Exclude<Screen, 'splash' | 'emergency'>; label: string; icon: IconName }> = [
   { id: 'home', label: 'Home', icon: 'home' },
   { id: 'route', label: 'Route', icon: 'map' },
@@ -354,7 +448,7 @@ function HomeScreen({ danger, onToggleDanger, onNavigate, onEmergency, onNotific
             </Text>
           </View>
         </View>
-        <GraphHopperMap origin={originCoords} destination={destinationCoords} routeType={selectedRoute} height={200} incidents={incidents} />
+        <GraphHopperMap origin={originCoords} destination={destinationCoords} routeType={selectedRoute} height={200} incidents={getCombinedMapIncidents(destinationText, originCoords, incidents)} />
       </View>
 
       {destinationCoords ? (
@@ -492,7 +586,7 @@ function RouteScreen({ onNavigate, onBack, onEmergency, topInset, incidents = []
           {isGeocodingDest ? <ActivityIndicator size="small" color={C.primary} /> : null}
         </View>
       </View>
-      <GraphHopperMap origin={originCoords} destination={destinationCoords} routeType={selectedRoute} height={230} incidents={routeIncidents} />
+      <GraphHopperMap origin={originCoords} destination={destinationCoords} routeType={selectedRoute} height={230} incidents={getCombinedMapIncidents(destinationText, originCoords, incidents)} />
       <TouchableOpacity onPress={onEmergency} activeOpacity={0.84} style={styles.routeEmergencyBanner}>
         <View style={styles.routeEmergencyIcon}><Icon name="alert-circle" size={23} color={C.primaryForeground} /></View>
         <View style={styles.routeEmergencyCopy}><Text style={styles.routeEmergencyTitle}>Need help on this trip?</Text><Text style={styles.routeEmergencySubtitle}>Emergency contacts and nearby services are ready</Text></View>
