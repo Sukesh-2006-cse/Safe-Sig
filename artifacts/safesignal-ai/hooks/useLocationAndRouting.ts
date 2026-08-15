@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import * as Location from 'expo-location';
 import { GRAPHHOPPER_API_KEY, DEFAULT_ORIGIN } from '@/constants/config';
+import { MapCache } from '@/utils/mapCache';
 
 export type LocationCoords = { lat: number; lng: number; name?: string };
 
@@ -58,6 +59,13 @@ export function useLocationAndRouting(
   // 2. Geocode Source text input using GraphHopper API
   const geocodeSource = useCallback(async (query: string) => {
     if (!query || query.trim().length < 2 || query.includes('Current location')) return;
+    
+    const cached = MapCache.getCachedGeocode(query);
+    if (cached) {
+      setOriginCoords({ lat: cached.lat, lng: cached.lng, name: cached.name });
+      return;
+    }
+
     setIsGeocodingSource(true);
     try {
       const primaryUrl = `https://graphhopper.com/api/1/geocode?q=${encodeURIComponent(query)}&point=${originCoords.lat},${originCoords.lng}&locale=en&key=${GRAPHHOPPER_API_KEY}`;
@@ -72,11 +80,13 @@ export function useLocationAndRouting(
 
       if (data && data.hits && data.hits.length > 0) {
         const hit = data.hits.find((h: any) => h.countrycode === 'IN' || h.country === 'India') || data.hits[0];
-        setOriginCoords({
+        const result = {
           lat: hit.point.lat,
           lng: hit.point.lng,
           name: hit.name || query,
-        });
+        };
+        MapCache.setCachedGeocode(query, result);
+        setOriginCoords(result);
       }
     } catch (err) {
       console.warn('Source Geocoding error:', err);
@@ -91,6 +101,13 @@ export function useLocationAndRouting(
       setDestinationCoords(null);
       return;
     }
+
+    const cached = MapCache.getCachedGeocode(query);
+    if (cached) {
+      setDestinationCoords({ lat: cached.lat, lng: cached.lng, name: cached.name });
+      return;
+    }
+
     setIsGeocodingDest(true);
     try {
       const primaryUrl = `https://graphhopper.com/api/1/geocode?q=${encodeURIComponent(query)}&point=${originCoords.lat},${originCoords.lng}&locale=en&key=${GRAPHHOPPER_API_KEY}`;
@@ -105,11 +122,13 @@ export function useLocationAndRouting(
 
       if (data && data.hits && data.hits.length > 0) {
         const hit = data.hits.find((h: any) => h.countrycode === 'IN' || h.country === 'India') || data.hits[0];
-        setDestinationCoords({
+        const result = {
           lat: hit.point.lat,
           lng: hit.point.lng,
           name: hit.name || query,
-        });
+        };
+        MapCache.setCachedGeocode(query, result);
+        setDestinationCoords(result);
       }
     } catch (err) {
       console.warn('Destination Geocoding error:', err);

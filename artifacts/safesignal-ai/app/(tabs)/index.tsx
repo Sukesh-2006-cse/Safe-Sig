@@ -19,6 +19,7 @@ import colors from '@/constants/colors';
 import { GraphHopperMap, Coords } from '@/components/GraphHopperMap';
 import { GRAPHHOPPER_API_KEY } from '@/constants/config';
 import { useLocationAndRouting } from '@/hooks/useLocationAndRouting';
+import { fetchTamilNaduNewsIncidents, ThreatIncident, ThreatCategory } from '@/services/tamilNaduNewsService';
 
 const C = colors.light;
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -188,7 +189,7 @@ function Page({ children, active, onNavigate, topInset, scroll = true }: { child
   );
 }
 
-function HomeScreen({ danger, onToggleDanger, onNavigate, onEmergency, onNotification, topInset }: { danger: boolean; onToggleDanger: () => void; onNavigate: (screen: Exclude<Screen, 'splash' | 'emergency'>) => void; onEmergency: () => void; onNotification: () => void; topInset: number }) {
+function HomeScreen({ danger, onToggleDanger, onNavigate, onEmergency, onNotification, topInset, incidents = [] }: { danger: boolean; onToggleDanger: () => void; onNavigate: (screen: Exclude<Screen, 'splash' | 'emergency'>) => void; onEmergency: () => void; onNotification: () => void; topInset: number; incidents?: ThreatIncident[] }) {
   const {
     sourceText,
     setSourceText,
@@ -261,19 +262,18 @@ function HomeScreen({ danger, onToggleDanger, onNavigate, onEmergency, onNotific
             </View>
             {isGeocodingSource ? <ActivityIndicator size="small" color={C.primary} style={{ alignSelf: 'flex-start', marginVertical: 2 }} /> : null}
 
-            <Text style={[styles.routeInputLabel, styles.routeToLabel]}>TO (DESTINATION)</Text>
-            <TextInput
-              value={destinationText}
-              onChangeText={setDestinationText}
-              onSubmitEditing={() => {
-                geocodeSource(sourceText);
-                geocodeDestination(destinationText);
-              }}
-              placeholder="Enter destination (e.g. Indiranagar, Airport)"
-              placeholderTextColor={C.mutedForeground}
-              style={styles.routeHomeTextInput}
-            />
-            {isGeocodingDest ? <ActivityIndicator size="small" color={C.primary} style={{ alignSelf: 'flex-start', marginVertical: 2 }} /> : null}
+            <View style={{ height: 1, backgroundColor: C.border, marginVertical: 8 }} />
+            <Text style={styles.routeInputLabel}>TO (DESTINATION)</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <TextInput
+                value={destinationText}
+                onChangeText={setDestinationText}
+                placeholder="Where to? (e.g. Indiranagar, Airport)"
+                placeholderTextColor={C.mutedForeground}
+                style={[styles.routeHomeTextInput, { flex: 1 }]}
+              />
+              {isGeocodingDest ? <ActivityIndicator size="small" color={C.primary} /> : null}
+            </View>
 
             <TouchableOpacity
               onPress={() => {
@@ -307,7 +307,7 @@ function HomeScreen({ danger, onToggleDanger, onNavigate, onEmergency, onNotific
             <Text style={styles.mapPreviewStatusText}>Live GraphHopper map</Text>
           </View>
         </View>
-        <GraphHopperMap origin={originCoords} destination={destinationCoords} routeType={selectedRoute} height={200} />
+        <GraphHopperMap origin={originCoords} destination={destinationCoords} routeType={selectedRoute} height={200} incidents={incidents} />
       </View>
 
       <View style={styles.bestRouteHeading}><View><Text style={styles.sectionTitle}>Best route for you</Text><Text style={styles.bestRouteSub}>Prioritizing safety over speed</Text></View><View style={styles.routeScore}><Icon name="shield-checkmark" size={14} color={C.success} /><Text style={styles.routeScoreText}>92 safety score</Text></View></View>
@@ -331,7 +331,7 @@ function HomeScreen({ danger, onToggleDanger, onNavigate, onEmergency, onNotific
   );
 }
 
-function RouteScreen({ onNavigate, onBack, onEmergency, topInset }: { onNavigate: (screen: Exclude<Screen, 'splash' | 'emergency'>) => void; onBack: () => void; onEmergency: () => void; topInset: number }) {
+function RouteScreen({ onNavigate, onBack, onEmergency, topInset, incidents = [] }: { onNavigate: (screen: Exclude<Screen, 'splash' | 'emergency'>) => void; onBack: () => void; onEmergency: () => void; topInset: number; incidents?: ThreatIncident[] }) {
   const {
     sourceText,
     setSourceText,
@@ -374,7 +374,7 @@ function RouteScreen({ onNavigate, onBack, onEmergency, topInset }: { onNavigate
           {isGeocodingDest ? <ActivityIndicator size="small" color={C.primary} /> : null}
         </View>
       </View>
-      <GraphHopperMap origin={originCoords} destination={destinationCoords} routeType={selectedRoute} height={230} />
+      <GraphHopperMap origin={originCoords} destination={destinationCoords} routeType={selectedRoute} height={230} incidents={incidents} />
       <TouchableOpacity onPress={onEmergency} activeOpacity={0.84} style={styles.routeEmergencyBanner}>
         <View style={styles.routeEmergencyIcon}><Icon name="alert-circle" size={23} color={C.primaryForeground} /></View>
         <View style={styles.routeEmergencyCopy}><Text style={styles.routeEmergencyTitle}>Need help on this trip?</Text><Text style={styles.routeEmergencySubtitle}>Emergency contacts and nearby services are ready</Text></View>
@@ -434,15 +434,46 @@ function ScanScreen({ onNavigate, topInset }: { onNavigate: (screen: Exclude<Scr
   );
 }
 
-function AlertsScreen({ filter, setFilter, onNavigate, topInset }: { filter: 'All' | AlertCategory; setFilter: (filter: 'All' | AlertCategory) => void; onNavigate: (screen: Exclude<Screen, 'splash' | 'emergency'>) => void; topInset: number }) {
-  const filtered = useMemo(() => filter === 'All' ? alerts : alerts.filter((alert) => alert.category === filter), [filter]);
+function AlertsScreen({ filter, setFilter, onNavigate, topInset, incidents = [] }: { filter: string; setFilter: (filter: any) => void; onNavigate: (screen: Exclude<Screen, 'splash' | 'emergency'>) => void; topInset: number; incidents?: ThreatIncident[] }) {
+  const filtered = useMemo(() => {
+    if (filter === 'All') return incidents;
+    return incidents.filter((item) => item.category === filter);
+  }, [filter, incidents]);
+
   return (
     <Page active="alerts" onNavigate={onNavigate} topInset={topInset}>
-      <TopBar title="Live alerts" right={<View style={styles.alertCount}><Text style={styles.alertCountText}>{alerts.length}</Text></View>} />
+      <TopBar title="Live Tamil Nadu alerts" right={<View style={styles.alertCount}><Text style={styles.alertCountText}>{filtered.length}</Text></View>} />
       <View style={styles.filterTabs}>
-        {(['All', 'Physical', 'Cyber'] as const).map((item) => <TouchableOpacity key={item} onPress={() => setFilter(item)} style={[styles.filterTab, filter === item && styles.filterTabActive]}><Text style={[styles.filterText, filter === item && styles.filterTextActive]}>{item}</Text></TouchableOpacity>)}
+        {(['All', 'Crime', 'Accident', 'Cyber', 'Hazard'] as const).map((item) => (
+          <TouchableOpacity key={item} onPress={() => setFilter(item)} style={[styles.filterTab, filter === item && styles.filterTabActive]}>
+            <Text style={[styles.filterText, filter === item && styles.filterTextActive]}>{item}</Text>
+          </TouchableOpacity>
+        ))}
       </View>
-      {filtered.length ? <View style={styles.liveAlertList}>{filtered.map((alert) => <AlertRow key={alert.title} alert={alert} />)}</View> : <View style={styles.emptyState}><View style={styles.emptyIcon}><Icon name="shield-checkmark" size={30} color={C.success} /></View><Text style={styles.emptyTitle}>All clear</Text><Text style={styles.emptyText}>No threats match this filter</Text></View>}
+      {filtered.length ? (
+        <View style={styles.liveAlertList}>
+          {filtered.map((item) => (
+            <View key={item.id} style={styles.threatCard}>
+              <View style={[styles.threatIcon, { backgroundColor: item.tone === 'danger' ? '#FECACA' : '#FED7AA' }]}>
+                <Icon name={item.category === 'Crime' ? 'warning' : item.category === 'Accident' ? 'car' : item.category === 'Cyber' ? 'wifi' : 'alert-circle'} size={19} color={item.tone === 'danger' ? C.destructive : C.warning} />
+              </View>
+              <View style={styles.threatCopy}>
+                <Text style={styles.alertTitle}>{item.title}</Text>
+                <Text style={styles.alertSubtitle}>📍 {item.subtitle} • {item.time}</Text>
+              </View>
+              <View style={[styles.badge, { backgroundColor: item.tone === 'danger' ? '#FEE2E2' : '#FEF3C7' }]}>
+                <Text style={[styles.badgeText, { color: item.tone === 'danger' ? C.destructive : C.warning }]}>{item.category}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      ) : (
+        <View style={styles.emptyState}>
+          <View style={styles.emptyIcon}><Icon name="shield-checkmark" size={30} color={C.success} /></View>
+          <Text style={styles.emptyTitle}>All clear in Tamil Nadu</Text>
+          <Text style={styles.emptyText}>No news threats match this category</Text>
+        </View>
+      )}
     </Page>
   );
 }
@@ -515,7 +546,14 @@ export default function SafeSignalHome() {
   const bottomInset = Math.max(insets.bottom, Platform.OS === 'web' ? 34 : 0);
   const [screen, setScreen] = useState<Screen>('splash');
   const [danger, setDanger] = useState(false);
-  const [alertFilter, setAlertFilter] = useState<'All' | AlertCategory>('All');
+  const [alertFilter, setAlertFilter] = useState<string>('All');
+  const [incidents, setIncidents] = useState<ThreatIncident[]>([]);
+
+  useEffect(() => {
+    fetchTamilNaduNewsIncidents().then((data) => {
+      setIncidents(data);
+    });
+  }, []);
 
   const navigate = (next: Exclude<Screen, 'splash' | 'emergency'>) => {
     Haptics.selectionAsync().catch(() => undefined);
@@ -527,10 +565,10 @@ export default function SafeSignalHome() {
   };
 
   if (screen === 'splash') return <SplashScreen onStart={() => setScreen('home')} topInset={topInset} bottomInset={bottomInset} />;
-  if (screen === 'home') return <HomeScreen danger={danger} onToggleDanger={() => setDanger(!danger)} onNavigate={navigate} onEmergency={openEmergency} onNotification={() => navigate('alerts')} topInset={topInset} />;
-  if (screen === 'route') return <RouteScreen onNavigate={navigate} onBack={() => navigate('home')} onEmergency={openEmergency} topInset={topInset} />;
+  if (screen === 'home') return <HomeScreen danger={danger} onToggleDanger={() => setDanger(!danger)} onNavigate={navigate} onEmergency={openEmergency} onNotification={() => navigate('alerts')} topInset={topInset} incidents={incidents} />;
+  if (screen === 'route') return <RouteScreen onNavigate={navigate} onBack={() => navigate('home')} onEmergency={openEmergency} topInset={topInset} incidents={incidents} />;
   if (screen === 'scan') return <ScanScreen onNavigate={navigate} topInset={topInset} />;
-  if (screen === 'alerts') return <AlertsScreen filter={alertFilter} setFilter={setAlertFilter} onNavigate={navigate} topInset={topInset} />;
+  if (screen === 'alerts') return <AlertsScreen filter={alertFilter} setFilter={setAlertFilter} onNavigate={navigate} topInset={topInset} incidents={incidents} />;
   if (screen === 'profile') return <ProfileScreen onNavigate={navigate} topInset={topInset} />;
   return <EmergencyScreen onBack={() => navigate('home')} topInset={topInset} />;
 }

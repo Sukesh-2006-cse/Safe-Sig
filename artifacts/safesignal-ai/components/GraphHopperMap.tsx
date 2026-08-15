@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View, Platform, TouchableOpacity, Modal } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View, Platform, TouchableOpacity, Modal, DimensionValue } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 import { GRAPHHOPPER_API_KEY, DEFAULT_ORIGIN } from '@/constants/config';
 import colors from '@/constants/colors';
+import { MapCache } from '@/utils/mapCache';
+import { ThreatIncident } from '@/services/tamilNaduNewsService';
 
 const C = colors.light;
 
@@ -13,10 +15,11 @@ export interface GraphHopperMapProps {
   origin?: Coords;
   destination?: Coords | null;
   routeType?: 'safe' | 'fast';
-  height?: number;
+  height?: DimensionValue;
   interactive?: boolean;
   allowFullScreen?: boolean;
   onRouteLoaded?: (info: { distanceKm: string; durationMin: number }) => void;
+  incidents?: ThreatIncident[];
 }
 
 export function GraphHopperMap({
@@ -27,6 +30,7 @@ export function GraphHopperMap({
   interactive = true,
   allowFullScreen = true,
   onRouteLoaded,
+  incidents = [],
 }: GraphHopperMapProps) {
   const [loading, setLoading] = useState(true);
   const [routeCoordinates, setRouteCoordinates] = useState<[number, number][]>([]);
@@ -50,6 +54,20 @@ export function GraphHopperMap({
     }
 
     async function fetchGraphHopperRoute() {
+      const cacheKey = MapCache.getRouteKey(origin.lat, origin.lng, destination!.lat, destination!.lng, activeRouteType);
+      const cachedRoute = MapCache.getCachedRoute(cacheKey);
+
+      if (cachedRoute) {
+        if (isMounted) {
+          setRouteCoordinates(cachedRoute.coordinates);
+          const info = { distanceKm: cachedRoute.distanceKm, durationMin: cachedRoute.durationMin };
+          setRouteInfo(info);
+          onRouteLoaded?.(info);
+          setLoading(false);
+        }
+        return;
+      }
+
       setLoading(true);
 
       try {
@@ -72,6 +90,11 @@ export function GraphHopperMap({
             const info = { distanceKm: `${distKm} km`, durationMin: durMin };
             setRouteInfo(info);
             onRouteLoaded?.(info);
+            MapCache.setCachedRoute(cacheKey, {
+              coordinates: rawCoords,
+              distanceKm: `${distKm} km`,
+              durationMin: durMin,
+            });
             setLoading(false);
           }
         } else {
@@ -149,6 +172,68 @@ export function GraphHopperMap({
       border-radius: 50%;
       box-shadow: 0 0 12px rgba(37,99,235,0.7);
     }
+    
+    /* Round Marking Pins */
+    .round-pin-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .round-pin {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      border: 2.5px solid #ffffff;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+      cursor: pointer;
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s;
+    }
+    .round-pin:hover {
+      transform: scale(1.3);
+      z-index: 9999 !important;
+    }
+    .round-pin-crime {
+      background: radial-gradient(circle at 35% 35%, #EF4444, #991B1B);
+      box-shadow: 0 0 12px rgba(239,68,68,0.7);
+    }
+    .round-pin-accident {
+      background: radial-gradient(circle at 35% 35%, #F97316, #C2410C);
+      box-shadow: 0 0 12px rgba(249,115,22,0.7);
+    }
+    .round-pin-cyber {
+      background: radial-gradient(circle at 35% 35%, #A855F7, #6B21A8);
+      box-shadow: 0 0 12px rgba(168,85,247,0.7);
+    }
+    .round-pin-hazard {
+      background: radial-gradient(circle at 35% 35%, #F59E0B, #B45309);
+      box-shadow: 0 0 12px rgba(245,158,11,0.7);
+    }
+
+    /* Zoom Responsive Visibility */
+    .zoom-hide-pins .tn-incident-marker {
+      display: none !important;
+    }
+    .zoom-low .round-pin {
+      width: 20px;
+      height: 20px;
+      font-size: 10px;
+      border-width: 1.5px;
+      opacity: 0.88;
+    }
+    .zoom-medium .round-pin {
+      width: 30px;
+      height: 30px;
+      font-size: 14px;
+    }
+    .zoom-high .round-pin {
+      width: 36px;
+      height: 36px;
+      font-size: 17px;
+    }
   </style>
 </head>
 <body>
@@ -162,9 +247,12 @@ export function GraphHopperMap({
       attributionControl: false
     });
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19
-    }).addTo(map);
+    var tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      maxNativeZoom: 19,
+      keepBuffer: 6
+    });
+    tileLayer.addTo(map);
 
     ${
       !hasDestination
@@ -240,6 +328,77 @@ export function GraphHopperMap({
         }
         `
     }
+
+    // Dynamic Zoom Level Responsive Styles & Visibility
+    function updateZoomStyles() {
+      var currentZoom = map.getZoom();
+      var container = map.getContainer();
+      container.classList.remove('zoom-low', 'zoom-medium', 'zoom-high', 'zoom-hide-pins');
+
+      if (currentZoom < 6) {
+        container.classList.add('zoom-hide-pins');
+      } else if (currentZoom < 9) {
+        container.classList.add('zoom-low');
+      } else if (currentZoom < 12) {
+        container.classList.add('zoom-medium');
+      } else {
+        container.classList.add('zoom-high');
+      }
+    }
+    map.on('zoomend', updateZoomStyles);
+
+    // Dynamic Categorized Round Marking Pin Plotting for Tamil Nadu
+    var incidents = ${JSON.stringify(incidents)};
+    if (incidents && incidents.length > 0) {
+      var incidentBounds = [];
+      incidents.forEach(function(item) {
+        var iconHtml = '⚠️';
+        var pinClass = 'round-pin round-pin-hazard';
+        var badgeBg = '#D97706';
+
+        if (item.category === 'Crime') {
+          iconHtml = '🚨';
+          pinClass = 'round-pin round-pin-crime';
+          badgeBg = '#DC2626';
+        } else if (item.category === 'Accident') {
+          iconHtml = '🚗';
+          pinClass = 'round-pin round-pin-accident';
+          badgeBg = '#EA580C';
+        } else if (item.category === 'Cyber') {
+          iconHtml = '🌐';
+          pinClass = 'round-pin round-pin-cyber';
+          badgeBg = '#9333EA';
+        }
+
+        var cleanTitle = (item.title || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        var cleanSub = (item.subtitle || 'Tamil Nadu').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        var cleanDistrict = (item.district || 'Tamil Nadu').replace(/'/g, "\\'");
+
+        var markerIcon = L.divIcon({
+          className: 'tn-incident-marker',
+          html: '<div class="' + pinClass + '" title="' + cleanTitle + '"><span>' + iconHtml + '</span></div>',
+          iconSize: [32, 32],
+          iconAnchor: [16, 16]
+        });
+
+        var popupHtml = '<div style="font-family:sans-serif; min-width:190px; padding:2px;">' +
+          '<div style="font-size:10px; font-weight:800; color:' + badgeBg + '; text-transform:uppercase; margin-bottom:3px; letter-spacing:0.5px;">' + iconHtml + ' ' + item.category + ' ALERT (' + cleanDistrict + ')</div>' +
+          '<div style="font-size:13px; font-weight:700; color:#0F172A; margin-bottom:5px; line-height:1.25;">' + cleanTitle + '</div>' +
+          '<div style="font-size:11px; color:#475569; margin-bottom:8px;">📍 ' + cleanSub + ' • ' + (item.time || 'Recently') + '</div>' +
+          (item.sourceUrl ? '<a href="' + item.sourceUrl + '" target="_blank" style="display:inline-block; font-size:11px; color:#2563EB; font-weight:600; text-decoration:none; background:#EFF6FF; padding:4px 8px; border-radius:6px;">Read full news report &rarr;</a>' : '') +
+          '</div>';
+
+        L.marker([item.lat, item.lng], { icon: markerIcon }).addTo(map).bindPopup(popupHtml);
+        incidentBounds.push([item.lat, item.lng]);
+      });
+
+      updateZoomStyles();
+
+      if (!${hasDestination} && incidentBounds.length > 0) {
+        var bounds = L.latLngBounds(incidentBounds);
+        map.fitBounds(bounds, { padding: [36, 36], maxZoom: 13 });
+      }
+    }
   </script>
 </body>
 </html>
@@ -247,10 +406,11 @@ export function GraphHopperMap({
 
   const destLat = destination?.lat || 0;
   const destLng = destination?.lng || 0;
-  const mapKey = `gh_${origin.lat.toFixed(4)}_${origin.lng.toFixed(4)}_${destLat.toFixed(4)}_${destLng.toFixed(4)}_${activeRouteType}_${hasDestination ? routeCoordinates.length : 0}`;
+  const incidentsHash = incidents.map(i => i.id).join('_');
+  const mapKey = `gh_${origin.lat.toFixed(3)}_${origin.lng.toFixed(3)}_${destLat.toFixed(3)}_${destLng.toFixed(3)}_${activeRouteType}_${hasDestination ? routeCoordinates.length : 0}_${incidents.length}_${incidentsHash}`;
 
-  const renderMapCanvas = (mapHeight: number) => (
-    <View style={[styles.container, { height: mapHeight }]}>
+  const renderMapCanvas = (mapHeight: DimensionValue, isFullScreen: boolean = false) => (
+    <View style={[styles.container, isFullScreen ? { flex: 1, height: '100%', marginVertical: 0 } : { height: mapHeight }]}>
       {loading ? (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="small" color={C.primary} />
@@ -288,7 +448,7 @@ export function GraphHopperMap({
         <Text style={styles.brandingText}>{hasDestination ? 'GraphHopper Live Routing' : 'Live Location Pinpoint'}</Text>
       </View>
 
-      {allowFullScreen ? (
+      {!isFullScreen && allowFullScreen ? (
         <TouchableOpacity
           onPress={() => setIsModalOpen(true)}
           style={styles.expandButton}
@@ -311,7 +471,7 @@ export function GraphHopperMap({
 
   return (
     <>
-      {renderMapCanvas(height)}
+      {renderMapCanvas(height, false)}
 
       {/* Full Screen Interactive Map Modal */}
       <Modal
@@ -352,7 +512,7 @@ export function GraphHopperMap({
         ) : null}
 
         <View style={styles.modalBody}>
-          {renderMapCanvas(520)}
+          {renderMapCanvas('100%', true)}
         </View>
 
         <View style={styles.modalFooter}>
