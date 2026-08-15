@@ -115,16 +115,16 @@ export function useLocationAndRouting(
   const [destinationText, setDestinationText] = useState<string>(initialDestination);
 
   const [originCoords, setOriginCoords] = useState<LocationCoords>({
-    lat: DEFAULT_ORIGIN.lat,
-    lng: DEFAULT_ORIGIN.lng,
-    name: initialSource,
+    lat: 12.9810,
+    lng: 80.0520,
+    name: 'Current location (Kundrathur)',
   });
 
-  const [destinationCoords, setDestinationCoords] = useState<LocationCoords | null>(
-    initialDestination
-      ? { lat: 13.0067, lng: 80.2020, name: 'Guindy, Chennai' }
-      : null
-  );
+  const [destinationCoords, setDestinationCoords] = useState<LocationCoords | null>({
+    lat: 13.0067,
+    lng: 80.2020,
+    name: 'Guindy, Chennai',
+  });
 
   const [isGeocodingSource, setIsGeocodingSource] = useState<boolean>(false);
   const [isGeocodingDest, setIsGeocodingDest] = useState<boolean>(false);

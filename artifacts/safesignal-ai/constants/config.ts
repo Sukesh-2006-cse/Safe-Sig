@@ -12,15 +12,14 @@ export const VIRUSTOTAL_KEY = process.env.VIRUSTOTAL_KEY || process.env.EXPO_PUB
 
 export const SAFE_BROWSING_KEY = process.env.SAFE_BROWSING_KEY || process.env.EXPO_PUBLIC_SAFE_BROWSING_KEY || '';
 
-// Default Location: Tamil Nadu Central (Chennai / Coimbatore corridor)
 export const DEFAULT_ORIGIN = {
-  name: 'Current Location (Anna Salai, Chennai, Tamil Nadu)',
-  lat: 13.0827,
-  lng: 80.2707,
+  name: 'Current Location (Kundrathur, Chennai)',
+  lat: 12.9810,
+  lng: 80.0520,
 };
 
 export const DEFAULT_DESTINATION = {
-  name: 'Gandhipuram, Coimbatore, Tamil Nadu',
-  lat: 11.0168,
-  lng: 76.9558,
+  name: 'Guindy, Chennai',
+  lat: 13.0067,
+  lng: 80.2020,
 };

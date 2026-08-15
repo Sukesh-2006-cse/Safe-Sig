@@ -631,31 +631,19 @@ export default function SafeSignalHome() {
   const mockRouteIncidents = useMemo(() => {
     return [
       {
-        id: 'mock_default_accident_1',
-        title: '🚨 Severe Vehicle Accident Reported',
-        subtitle: 'Corridor Traffic & Accident Hotspot',
+        id: 'mock_accident_blockage_pammal',
+        title: '🚨 Multi-Vehicle Collision Blockage',
+        subtitle: 'Shortest Direct Road Blocked • Police & Rescue Active',
         category: 'Accident' as ThreatCategory,
-        district: 'Main Route Corridor',
-        lat: originCoords.lat + 0.004,
-        lng: originCoords.lng + 0.005,
-        time: '10 mins ago',
+        district: 'Anakaputhur / Pammal Stretch',
+        lat: 12.9730,
+        lng: 80.1340,
+        time: 'Just Now',
         tone: 'danger' as const,
-        sourceName: 'TN Highway Traffic Police',
-      },
-      {
-        id: 'mock_default_crime_2',
-        title: '⚠️ Night Theft & Robbery Zone',
-        subtitle: 'Unsafe Corridor Stretch',
-        category: 'Crime' as ThreatCategory,
-        district: 'High Crime Risk Zone',
-        lat: originCoords.lat - 0.005,
-        lng: originCoords.lng - 0.004,
-        time: '25 mins ago',
-        tone: 'danger' as const,
-        sourceName: 'SafeSignal Crime Scanner',
+        sourceName: 'SafeSignal AI Auto-Reroute Active (Detour)',
       },
     ];
-  }, [originCoords.lat, originCoords.lng]);
+  }, []);
 
   const activeSosIncident: ThreatIncident = {
     id: 'sos_active_pin',

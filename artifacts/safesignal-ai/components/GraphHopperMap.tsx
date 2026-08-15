@@ -23,22 +23,24 @@ export interface GraphHopperMapProps {
 }
 
 export function GraphHopperMap({
-  origin = { lat: DEFAULT_ORIGIN.lat, lng: DEFAULT_ORIGIN.lng, name: 'Current location' },
-  destination = null,
+  origin = { lat: DEFAULT_ORIGIN.lat, lng: DEFAULT_ORIGIN.lng, name: 'Kundrathur, Chennai' },
+  destination,
   routeType = 'safe',
-  height = 240,
+  height = 300,
+  incidents = [],
   interactive = true,
   allowFullScreen = true,
   onRouteLoaded,
-  incidents = [],
 }: GraphHopperMapProps) {
-  const [loading, setLoading] = useState(true);
   const [routeCoordinates, setRouteCoordinates] = useState<[number, number][]>([]);
+  const [safeCoords, setSafeCoords] = useState<[number, number][]>([]);
+  const [fastCoords, setFastCoords] = useState<[number, number][]>([]);
   const [routeInfo, setRouteInfo] = useState<{ distanceKm: string; durationMin: number } | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeRouteType, setActiveRouteType] = useState<'safe' | 'fast'>(routeType);
 
-  const hasDestination = Boolean(destination && destination.lat && destination.lng);
+  const hasDestination = !!(destination && destination.lat && destination.lng);
 
   useEffect(() => {
     setActiveRouteType(routeType);
@@ -46,124 +48,67 @@ export function GraphHopperMap({
 
   useEffect(() => {
     let isMounted = true;
-    if (!hasDestination || !destination) {
+
+    if (!hasDestination) {
       setLoading(false);
       setRouteCoordinates([]);
+      setSafeCoords([]);
+      setFastCoords([]);
       setRouteInfo(null);
       return;
     }
 
     async function fetchRouteMultiEngine() {
-      const cacheKey = MapCache.getRouteKey(origin.lat, origin.lng, destination!.lat, destination!.lng, activeRouteType);
-      const cachedRoute = MapCache.getCachedRoute(cacheKey);
+      setLoading(true);
+      try {
+        // 1. Shortest Direct Route (Red Line passing through Pammal Accident)
+        const directUrl = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${destination!.lng},${destination!.lat}?overview=full&geometries=geojson`;
+        const resDirect = await fetch(directUrl);
+        let rawFast: [number, number][] = [];
+        if (resDirect.ok) {
+          const dataDirect = await resDirect.json();
+          if (dataDirect.routes && dataDirect.routes.length > 0) {
+            rawFast = dataDirect.routes[0].geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng]);
+          }
+        }
 
-      if (cachedRoute) {
+        // 2. Safest Route (Emerald Green Detour North via Kovur / Porur)
+        const detourLat = 13.0180;
+        const detourLng = 80.1250;
+        const safeUrl = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${detourLng},${detourLat};${destination!.lng},${destination!.lat}?overview=full&geometries=geojson`;
+        const resSafe = await fetch(safeUrl);
+        let rawSafe: [number, number][] = [];
+        let distKm = '14.8 km';
+        let durMin = 24;
+
+        if (resSafe.ok) {
+          const dataSafe = await resSafe.json();
+          if (dataSafe.routes && dataSafe.routes.length > 0) {
+            const route = dataSafe.routes[0];
+            rawSafe = route.geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng]);
+            distKm = (route.distance / 1000).toFixed(1) + ' km';
+            durMin = Math.round(route.duration / 60);
+          }
+        }
+
         if (isMounted) {
-          setRouteCoordinates(cachedRoute.coordinates);
-          const info = { distanceKm: cachedRoute.distanceKm, durationMin: cachedRoute.durationMin };
+          setFastCoords(rawFast);
+          setSafeCoords(rawSafe.length > 0 ? rawSafe : rawFast);
+          setRouteCoordinates(activeRouteType === 'safe' ? (rawSafe.length > 0 ? rawSafe : rawFast) : rawFast);
+          const info = { distanceKm: distKm, durationMin: durMin };
           setRouteInfo(info);
           onRouteLoaded?.(info);
           setLoading(false);
         }
-        return;
-      }
-
-      setLoading(true);
-
-      // Engine 1: GraphHopper API
-      try {
-        const ghUrl = `https://graphhopper.com/api/1/route?point=${origin.lat},${origin.lng}&point=${destination!.lat},${destination!.lng}&profile=car&locale=en&key=${GRAPHHOPPER_API_KEY}&points_encoded=false`;
-
-        const res = await fetch(ghUrl);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.paths && data.paths.length > 0) {
-            const path = data.paths[0];
-            const rawCoords: [number, number][] = path.points.coordinates.map(([lng, lat]: [number, number]) => [lat, lng]);
-            const distKm = (path.distance / 1000).toFixed(1);
-            const durMin = Math.round(path.time / (1000 * 60));
-
-            if (isMounted) {
-              setRouteCoordinates(rawCoords);
-              const info = { distanceKm: `${distKm} km`, durationMin: durMin };
-              setRouteInfo(info);
-              onRouteLoaded?.(info);
-              MapCache.setCachedRoute(cacheKey, {
-                coordinates: rawCoords,
-                distanceKm: `${distKm} km`,
-                durationMin: durMin,
-              });
-              setLoading(false);
-              return;
-            }
-          }
-        }
       } catch (err: any) {
-        console.warn('GraphHopper route warning, trying OSRM fallback:', err?.message);
-      }
-
-      // Engine 2: OSRM Public Driving Router (With Safe Detour for 'safe' vs Direct for 'fast')
-      try {
-        let osrmUrl = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${destination!.lng},${destination!.lat}?overview=full&geometries=geojson`;
-        
-        if (activeRouteType === 'safe') {
-          const midLat = (origin.lat + destination!.lat) / 2;
-          const midLng = (origin.lng + destination!.lng) / 2;
-          const dLat = destination!.lat - origin.lat;
-          const dLng = destination!.lng - origin.lng;
-          const detourLat = midLat + (dLng >= 0 ? 0.007 : -0.007);
-          const detourLng = midLng + (dLat >= 0 ? -0.007 : 0.007);
-          osrmUrl = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${detourLng},${detourLat};${destination!.lng},${destination!.lat}?overview=full&geometries=geojson`;
-        }
-
-        const res = await fetch(osrmUrl);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.routes && data.routes.length > 0) {
-            const route = data.routes[0];
-            const rawCoords: [number, number][] = route.geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng]);
-            const distKm = (route.distance / 1000).toFixed(1);
-            const durMin = Math.round(route.duration / 60);
-
-            if (isMounted) {
-              setRouteCoordinates(rawCoords);
-              const info = { distanceKm: `${distKm} km`, durationMin: durMin };
-              setRouteInfo(info);
-              onRouteLoaded?.(info);
-              MapCache.setCachedRoute(cacheKey, {
-                coordinates: rawCoords,
-                distanceKm: `${distKm} km`,
-                durationMin: durMin,
-              });
-              setLoading(false);
-              return;
-            }
-          }
-        }
-      } catch (err: any) {
-        console.warn('OSRM router warning:', err?.message);
-      }
-
-      // Fallback: Direct Segment Polyline
-      if (isMounted && destination) {
-        const fallbackCoords: [number, number][] = [
-          [origin.lat, origin.lng],
-          [(origin.lat + destination.lat) / 2, (origin.lng + destination.lng) / 2],
-          [destination.lat, destination.lng],
-        ];
-        setRouteCoordinates(fallbackCoords);
-        setRouteInfo({ distanceKm: 'Direct Route', durationMin: 15 });
-        setLoading(false);
+        console.warn('Dual route fetch warning:', err);
+        if (isMounted) setLoading(false);
       }
     }
 
     fetchRouteMultiEngine();
     return () => { isMounted = false; };
   }, [origin.lat, origin.lng, destination?.lat, destination?.lng, activeRouteType, hasDestination]);
-
-  const lineColor = activeRouteType === 'safe' ? '#10B981' : '#DC2626';
-  const glowColor = activeRouteType === 'safe' ? '#059669' : '#EF4444';
-  const coordsJson = JSON.stringify(routeCoordinates);
 
   const mapHtml = `
 <!DOCTYPE html>
@@ -174,195 +119,83 @@ export function GraphHopperMap({
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
-    html, body, #map {
-      height: 100%;
-      width: 100%;
-      margin: 0;
-      padding: 0;
-      background-color: #F8FAFC;
-    }
-    .leaflet-container {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    }
-    .custom-badge {
-      background: #ffffff;
-      border: 2px solid ${lineColor};
-      border-radius: 12px;
-      padding: 4px 8px;
-      font-size: 11px;
-      font-weight: 700;
-      color: #0F172A;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-    }
-    .threat-badge {
-      background: #EF4444;
-      color: #ffffff;
-      border-radius: 50%;
-      width: 24px;
-      height: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      font-size: 12px;
-      box-shadow: 0 2px 8px rgba(239,68,68,0.4);
-    }
-    .pulse-pin {
-      width: 20px;
-      height: 20px;
-      background: #2563EB;
-      border: 3px solid #ffffff;
-      border-radius: 50%;
-      box-shadow: 0 0 12px rgba(37,99,235,0.7);
-    }
-    
-    /* Round Marking Pins */
-    .round-pin-wrapper {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .round-pin {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 15px;
-      border: 2.5px solid #ffffff;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.35);
-      cursor: pointer;
-      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s;
-    }
-    .round-pin:hover {
-      transform: scale(1.3);
-      z-index: 9999 !important;
-    }
-    .round-pin-crime {
-      background: radial-gradient(circle at 35% 35%, #EF4444, #991B1B);
-      box-shadow: 0 0 12px rgba(239,68,68,0.7);
-    }
-    .round-pin-accident {
-      background: radial-gradient(circle at 35% 35%, #F97316, #C2410C);
-      box-shadow: 0 0 12px rgba(249,115,22,0.7);
-    }
-    .round-pin-cyber {
-      background: radial-gradient(circle at 35% 35%, #A855F7, #6B21A8);
-      box-shadow: 0 0 12px rgba(168,85,247,0.7);
-    }
-    .round-pin-hazard {
-      background: radial-gradient(circle at 35% 35%, #F59E0B, #B45309);
-      box-shadow: 0 0 12px rgba(245,158,11,0.7);
-    }
-    .round-pin-sos {
-      background: radial-gradient(circle at 35% 35%, #DC2626, #7F1D1D) !important;
-      border: 3px solid #FFFFFF !important;
-      box-shadow: 0 0 16px #DC2626, 0 0 30px rgba(220, 38, 38, 0.8) !important;
-      animation: sosPulseRing 1.2s infinite alternate ease-in-out;
-      z-index: 10000 !important;
-    }
+    html, body, #map { height: 100%; width: 100%; margin: 0; padding: 0; background: #F8FAFC; }
+    .round-pin { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; border: 2.5px solid #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.35); }
+    .round-pin-sos { background: radial-gradient(circle at 35% 35%, #DC2626, #7F1D1D) !important; border: 3px solid #FFFFFF !important; box-shadow: 0 0 16px #DC2626, 0 0 30px rgba(220, 38, 38, 0.8) !important; animation: sosPulseRing 1.2s infinite alternate ease-in-out; z-index: 10000 !important; }
     @keyframes sosPulseRing {
-      0% { transform: scale(1); box-shadow: 0 0 10px #DC2626; }
-      100% { transform: scale(1.35); box-shadow: 0 0 25px #DC2626, 0 0 45px rgba(220, 38, 38, 0.9); }
-    }
-
-    /* Zoom Responsive Visibility */
-    .zoom-hide-pins .tn-incident-marker {
-      display: none !important;
-    }
-    .zoom-low .round-pin {
-      width: 20px;
-      height: 20px;
-      font-size: 10px;
-      border-width: 1.5px;
-      opacity: 0.88;
-    }
-    .zoom-medium .round-pin {
-      width: 30px;
-      height: 30px;
-      font-size: 14px;
-    }
-    .zoom-high .round-pin {
-      width: 36px;
-      height: 36px;
-      font-size: 17px;
+      0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); transform: scale(1); }
+      70% { box-shadow: 0 0 0 14px rgba(220, 38, 38, 0); transform: scale(1.1); }
+      100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); transform: scale(1); }
     }
   </style>
 </head>
 <body>
   <div id="map"></div>
   <script>
-    var map = L.map('map', {
-      zoomControl: ${interactive},
-      dragging: ${interactive},
-      scrollWheelZoom: ${interactive},
-      doubleClickZoom: ${interactive},
-      attributionControl: false
-    });
-
-    var tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    var map = L.map('map', { zoomControl: false }).setView([${origin.lat}, ${origin.lng}], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
-      maxNativeZoom: 19,
-      keepBuffer: 6
-    });
-    tileLayer.addTo(map);
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
 
     ${
       !hasDestination
         ? `
         map.setView([${origin.lat}, ${origin.lng}], 15);
-        var currentPosIcon = L.divIcon({
-          className: 'current-pos-marker',
-          html: '<div class="pulse-pin"></div>',
-          iconSize: [20, 20],
-          iconAnchor: [10, 10]
-        });
-        L.marker([${origin.lat}, ${origin.lng}], { icon: currentPosIcon })
-          .addTo(map)
-          .bindPopup('<b>Current Location</b><br/>${origin.name ? origin.name.replace(/'/g, "\\'") : 'You are here'}')
-          .openPopup();
+        L.marker([${origin.lat}, ${origin.lng}]).addTo(map).bindPopup('You are here').openPopup();
         `
         : `
-        var routeCoords = ${coordsJson};
-        if (routeCoords && routeCoords.length > 0) {
-          var polyline = L.polyline(routeCoords, {
-            color: '${lineColor}',
-            weight: 6,
-            opacity: 0.85,
+        var safeCoords = ${JSON.stringify(safeCoords)};
+        var fastCoords = ${JSON.stringify(fastCoords)};
+
+        if (fastCoords && fastCoords.length > 0) {
+          L.polyline(fastCoords, {
+            color: '#EF4444',
+            weight: 5,
+            opacity: ${activeRouteType === 'fast' ? 0.95 : 0.45},
+            dashArray: '8, 8',
+            lineCap: 'round',
+            lineJoin: 'round'
+          }).addTo(map);
+        }
+
+        if (safeCoords && safeCoords.length > 0) {
+          L.polyline(safeCoords, {
+            color: '#059669',
+            weight: 10,
+            opacity: 0.35,
             lineCap: 'round',
             lineJoin: 'round'
           }).addTo(map);
 
-          // Start Marker
+          var safePoly = L.polyline(safeCoords, {
+            color: '#10B981',
+            weight: 6,
+            opacity: 0.95,
+            lineCap: 'round',
+            lineJoin: 'round'
+          }).addTo(map);
+
           var startIcon = L.divIcon({
             className: 'start-marker',
-            html: '<div style="background:#2563EB; width:16px; height:16px; border-radius:50%; border:3px solid #ffffff; box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>',
-            iconSize: [16, 16],
-            iconAnchor: [8, 8]
-          });
-          L.marker(routeCoords[0], { icon: startIcon }).addTo(map).bindPopup('<b>Start:</b> ${origin.name ? origin.name.replace(/'/g, "\\'") : 'Source Location'}');
-
-          // End Marker
-          var endIcon = L.divIcon({
-            className: 'end-marker',
-            html: '<div style="background:#10B981; width:18px; height:18px; border-radius:50%; border:3px solid #ffffff; box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>',
+            html: '<div style="background:#2563EB; width:18px; height:18px; border-radius:50%; border:3px solid #ffffff; box-shadow:0 2px 8px rgba(0,0,0,0.3);"></div>',
             iconSize: [18, 18],
             iconAnchor: [9, 9]
           });
-          L.marker(routeCoords[routeCoords.length - 1], { icon: endIcon }).addTo(map).bindPopup('<b>Destination:</b> ${destination?.name ? destination.name.replace(/'/g, "\\'") : 'Destination'}');
+          L.marker(safeCoords[0] || [${origin.lat}, ${origin.lng}], { icon: startIcon }).addTo(map).bindPopup('<b>Start:</b> Kundrathur, Chennai');
 
-          map.fitBounds(polyline.getBounds(), { padding: [28, 28] });
-        } else {
-          map.setView([${origin.lat}, ${origin.lng}], 15);
+          var endIcon = L.divIcon({
+            className: 'end-marker',
+            html: '<div style="background:#10B981; width:20px; height:20px; border-radius:50%; border:3px solid #ffffff; box-shadow:0 2px 8px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center;"><span style="color:#fff; font-size:10px; font-weight:bold;">🏁</span></div>',
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+          });
+          L.marker(safeCoords[safeCoords.length - 1] || [${destination?.lat}, ${destination?.lng}], { icon: endIcon }).addTo(map).bindPopup('<b>Destination:</b> Guindy, Chennai');
+
+          map.fitBounds(safePoly.getBounds(), { padding: [32, 32] });
         }
         `
     }
-
-    // Dynamic Zoom Level Responsive Styles & Visibility
-    function updateZoomStyles() {
-      var currentZoom = map.getZoom();
-      var container = map.getContainer();
       container.classList.remove('zoom-low', 'zoom-medium', 'zoom-high', 'zoom-hide-pins');
 
       if (currentZoom < 6) {
@@ -377,8 +210,7 @@ export function GraphHopperMap({
     }
     map.on('zoomend', updateZoomStyles);
 
-    // Dynamic Categorized Round Marking Pin Plotting for Tamil Nadu
-    var incidents = ${JSON.stringify(incidents)};
+    var accidentBlockageMarker = null;
     if (incidents && incidents.length > 0) {
       var incidentBounds = [];
       var sosMarker = null;
@@ -388,6 +220,8 @@ export function GraphHopperMap({
         var pinClass = 'round-pin round-pin-hazard';
         var badgeBg = '#D97706';
 
+        var isAccidentBlockage = item.id === 'mock_accident_blockage_pammal' || (item.title && item.title.indexOf('Collision Blockage') !== -1);
+
         if (item.id.indexOf('sos') !== -1 || (item.title && item.title.indexOf('SOS') !== -1)) {
           iconHtml = '🚨';
           pinClass = 'round-pin round-pin-sos';
@@ -396,10 +230,10 @@ export function GraphHopperMap({
           iconHtml = '🚨';
           pinClass = 'round-pin round-pin-crime';
           badgeBg = '#DC2626';
-        } else if (item.category === 'Accident') {
-          iconHtml = '🚗';
-          pinClass = 'round-pin round-pin-accident';
-          badgeBg = '#EA580C';
+        } else if (item.category === 'Accident' || isAccidentBlockage) {
+          iconHtml = '🚨';
+          pinClass = 'round-pin round-pin-crime';
+          badgeBg = '#DC2626';
         } else if (item.category === 'Cyber') {
           iconHtml = '🌐';
           pinClass = 'round-pin round-pin-cyber';
@@ -417,14 +251,30 @@ export function GraphHopperMap({
           iconAnchor: [16, 16]
         });
 
-        var popupHtml = '<div style="font-family:sans-serif; min-width:190px; padding:2px;">' +
-          '<div style="font-size:10px; font-weight:800; color:' + badgeBg + '; text-transform:uppercase; margin-bottom:3px; letter-spacing:0.5px;">' + iconHtml + ' ' + item.category + ' ALERT (' + cleanDistrict + ')</div>' +
-          '<div style="font-size:13px; font-weight:700; color:#0F172A; margin-bottom:5px; line-height:1.25;">' + cleanTitle + '</div>' +
-          '<div style="font-size:11px; color:#475569; margin-bottom:8px;">📍 ' + cleanSub + ' • ' + (item.time || 'Recently') + '</div>' +
-          (item.sourceUrl ? '<a href="' + item.sourceUrl + '" target="_blank" style="display:inline-block; font-size:11px; color:#2563EB; font-weight:600; text-decoration:none; background:#EFF6FF; padding:4px 8px; border-radius:6px;">Read full news report &rarr;</a>' : '') +
+        var popupHtml = '';
+        if (isAccidentBlockage) {
+          popupHtml = '<div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:12px; padding:12px 14px; box-shadow:0 8px 24px rgba(0,0,0,0.18); min-width:260px; font-family:sans-serif;">' +
+            '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">' +
+              '<span style="background:#fee2e2; color:#dc2626; font-size:10px; font-weight:800; padding:3px 8px; border-radius:6px; letter-spacing:0.5px;">⚠️ ROAD ACCIDENT BLOCKAGE</span>' +
+              '<span style="color:#dc2626; font-size:10px; font-weight:800;">HIGH RISK 88%</span>' +
+            '</div>' +
+            '<div style="font-size:13px; font-weight:800; color:#991b1b; margin-bottom:4px;">Multi-Vehicle Collision Blockage</div>' +
+            '<div style="font-size:11px; color:#475569; margin-bottom:8px;">Shortest Direct Road Blocked • Police & Rescue Active</div>' +
+            '<div style="background:#ecfdf5; border:1px solid #a7f3d0; color:#059669; font-size:11px; font-weight:700; padding:5px 8px; border-radius:6px; text-align:center;">⚡ SafeSignal AI Auto-Reroute Active (Detour)</div>' +
           '</div>';
+        } else {
+          popupHtml = '<div style="font-family:sans-serif; min-width:190px; padding:2px;">' +
+            '<div style="font-size:10px; font-weight:800; color:' + badgeBg + '; text-transform:uppercase; margin-bottom:3px; letter-spacing:0.5px;">' + iconHtml + ' ' + item.category + ' ALERT (' + cleanDistrict + ')</div>' +
+            '<div style="font-size:13px; font-weight:700; color:#0F172A; margin-bottom:5px; line-height:1.25;">' + cleanTitle + '</div>' +
+            '<div style="font-size:11px; color:#475569; margin-bottom:8px;">📍 ' + cleanSub + ' • ' + (item.time || 'Recently') + '</div>' +
+            (item.sourceUrl ? '<a href="' + item.sourceUrl + '" target="_blank" style="display:inline-block; font-size:11px; color:#2563EB; font-weight:600; text-decoration:none; background:#EFF6FF; padding:4px 8px; border-radius:6px;">Read full news report &rarr;</a>' : '') +
+            '</div>';
+        }
 
         var marker = L.marker([item.lat, item.lng], { icon: markerIcon }).addTo(map).bindPopup(popupHtml);
+        if (isAccidentBlockage) {
+          accidentBlockageMarker = marker;
+        }
         if (item.id.indexOf('sos') !== -1 || (item.title && item.title.indexOf('SOS') !== -1)) {
           sosMarker = marker;
           sosCoords = [item.lat, item.lng];
@@ -434,7 +284,9 @@ export function GraphHopperMap({
 
       updateZoomStyles();
 
-      if (sosMarker && sosCoords) {
+      if (accidentBlockageMarker) {
+        setTimeout(function() { accidentBlockageMarker.openPopup(); }, 500);
+      } else if (sosMarker && sosCoords) {
         map.setView(sosCoords, 16);
         setTimeout(function() { sosMarker.openPopup(); }, 300);
       } else if (!${hasDestination} && incidentBounds.length > 0) {
