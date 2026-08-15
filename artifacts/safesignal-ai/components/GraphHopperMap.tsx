@@ -191,11 +191,15 @@ export function GraphHopperMap({
             iconAnchor: [10, 10]
           });
           L.marker(safeCoords[safeCoords.length - 1] || [${destination?.lat}, ${destination?.lng}], { icon: endIcon }).addTo(map).bindPopup('<b>Destination:</b> Guindy, Chennai');
-
           map.fitBounds(safePoly.getBounds(), { padding: [32, 32] });
         }
         `
     }
+
+    function updateZoomStyles() {
+      var currentZoom = map.getZoom();
+      var container = map.getContainer();
+      if (!container) return;
       container.classList.remove('zoom-low', 'zoom-medium', 'zoom-high', 'zoom-hide-pins');
 
       if (currentZoom < 6) {
