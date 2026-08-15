@@ -497,12 +497,15 @@ function EmergencyScreen({ onBack, topInset, activeSos, onToggleSos }: { onBack:
         <View style={styles.sosHero}>
           <TouchableOpacity activeOpacity={0.85} onPress={onToggleSos}>
             <Animated.View style={[styles.sosCircle, { opacity: pulse, backgroundColor: activeSos ? '#DC2626' : C.destructive }]}>
-              <Text style={styles.sosText}>{activeSos ? 'SOS\nACTIVE' : 'SOS'}</Text>
+              <Icon name={activeSos ? 'alert-circle' : 'warning-outline'} size={activeSos ? 36 : 38} color="#FFFFFF" />
+              <Text style={activeSos ? styles.sosActiveLabel : styles.sosText}>
+                {activeSos ? 'SOS ACTIVE' : 'SOS'}
+              </Text>
             </Animated.View>
           </TouchableOpacity>
           <Text style={[styles.sosHint, activeSos && { color: C.destructive, fontWeight: '700' }]}>
             {activeSos
-              ? '🚨 EMERGENCY ACTIVE! Your location is mapped as Emergency SOS on SafeSignal Map'
+              ? '🚨 EMERGENCY ACTIVE!\nYour live location is mapped as Emergency SOS on SafeSignal Map'
               : 'Tap to alert emergency contacts & share location'}
           </Text>
           {activeSos ? (
@@ -860,24 +863,25 @@ const styles = StyleSheet.create({
   emptyTitle: { fontFamily: 'Inter_700Bold', fontSize: 17, color: C.foreground },
   emptyText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: C.mutedForeground, marginTop: 5 },
   sosHero: { alignItems: 'center', paddingTop: 22, paddingBottom: 27 },
-  sosCircle: { width: 140, height: 140, borderRadius: 70, backgroundColor: C.destructive, alignItems: 'center', justifyContent: 'center', shadowColor: C.destructive, shadowOpacity: 0.22, shadowRadius: 18, shadowOffset: { width: 0, height: 7 }, elevation: 7 },
-  sosText: { fontFamily: 'Inter_700Bold', color: C.primaryForeground, fontSize: 32, letterSpacing: 2 },
-  sosHint: { fontFamily: 'Inter_400Regular', color: C.mutedForeground, fontSize: 12, textAlign: 'center', marginTop: 17, marginBottom: 4 },
+  sosCircle: { width: 146, height: 146, borderRadius: 73, backgroundColor: C.destructive, alignItems: 'center', justifyContent: 'center', shadowColor: C.destructive, shadowOpacity: 0.35, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 8, padding: 8 },
+  sosText: { fontFamily: 'Inter_700Bold', color: '#FFFFFF', fontSize: 26, letterSpacing: 1.5, marginTop: 4 },
+  sosActiveLabel: { fontFamily: 'Inter_700Bold', color: '#FFFFFF', fontSize: 15, letterSpacing: 1.2, marginTop: 4, textAlign: 'center' },
+  sosHint: { fontFamily: 'Inter_400Regular', color: C.mutedForeground, fontSize: 12, textAlign: 'center', marginTop: 17, marginBottom: 10, lineHeight: 18 },
   deactivateSosButton: {
-    backgroundColor: C.destructive,
+    backgroundColor: '#DC2626',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    marginTop: 10,
-    shadowColor: C.destructive,
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 13,
+    borderRadius: 14,
+    marginTop: 6,
+    shadowColor: '#DC2626',
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    elevation: 4,
   },
   deactivateSosText: {
     fontFamily: 'Inter_700Bold',
