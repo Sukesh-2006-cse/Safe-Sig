@@ -174,6 +174,19 @@ export function GraphHopperMap({
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
+    html, body, #map {
+      height: 100%;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      background-color: #F8FAFC;
+    }
+    .leaflet-container {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .custom-badge {
+      background: #ffffff;
+      border: 2px solid ${lineColor};
       border-radius: 12px;
       padding: 4px 8px;
       font-size: 11px;
