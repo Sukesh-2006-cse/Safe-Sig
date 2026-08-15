@@ -22,6 +22,9 @@ import { useLocationAndRouting } from '@/hooks/useLocationAndRouting';
 import * as Location from 'expo-location';
 import { fetchTamilNaduNewsIncidents, ThreatIncident, ThreatCategory } from '@/services/tamilNaduNewsService';
 import { saveIncidentsToMongoDB } from '@/services/mongoService';
+import { AuthModal } from '@/components/AuthModal';
+import { getStoredUserSession, clearUserSession } from '@/services/authService';
+import { UserProfile } from '@/services/mongoService';
 
 const C = colors.light;
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -191,7 +194,7 @@ function Page({ children, active, onNavigate, topInset, scroll = true }: { child
   );
 }
 
-function HomeScreen({ danger, onToggleDanger, onNavigate, onEmergency, onNotification, topInset, incidents = [] }: { danger: boolean; onToggleDanger: () => void; onNavigate: (screen: Exclude<Screen, 'splash' | 'emergency'>) => void; onEmergency: () => void; onNotification: () => void; topInset: number; incidents?: ThreatIncident[] }) {
+function HomeScreen({ danger, onToggleDanger, onNavigate, onEmergency, onNotification, topInset, incidents = [], userProfile, onOpenAuth }: { danger: boolean; onToggleDanger: () => void; onNavigate: (screen: Exclude<Screen, 'splash' | 'emergency'>) => void; onEmergency: () => void; onNotification: () => void; topInset: number; incidents?: ThreatIncident[]; userProfile?: UserProfile | null; onOpenAuth?: () => void }) {
   const {
     sourceText,
     setSourceText,
@@ -214,15 +217,22 @@ function HomeScreen({ danger, onToggleDanger, onNavigate, onEmergency, onNotific
   return (
     <Page active="home" onNavigate={onNavigate} topInset={topInset}>
       <View style={styles.routeHomeHeader}>
-        <View>
+        <TouchableOpacity onPress={onOpenAuth} activeOpacity={0.8}>
           <Text style={styles.eyebrow}>YOUR SAFE TRIP</Text>
           <Text style={styles.brandTitle}>Plan a safer <Text style={styles.brandAccent}>journey</Text></Text>
-          <Text style={styles.homeHeaderSub}>Good morning, Sukesh</Text>
-        </View>
-        <TouchableOpacity onPress={onNotification} style={styles.headerIconButton}>
-          <Icon name="notifications-outline" size={22} color={C.foreground} />
-          <View style={styles.notificationDot} />
+          <Text style={styles.homeHeaderSub}>Good morning, {userProfile ? userProfile.name : 'Sukesh M'}</Text>
         </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <TouchableOpacity onPress={onOpenAuth} activeOpacity={0.8} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#93C5FD' }}>
+            <Text style={{ fontSize: 12, fontWeight: '800', color: C.primary }}>
+              {userProfile ? userProfile.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() : 'SM'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={onNotification} style={styles.headerIconButton}>
+            <Icon name="notifications-outline" size={22} color={C.foreground} />
+            <View style={styles.notificationDot} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <TouchableOpacity onPress={onToggleDanger} activeOpacity={0.84} style={[styles.tripSafetyPill, danger && styles.tripSafetyPillDanger]}>
@@ -590,7 +600,7 @@ function ContactRow({ initials, name, relation }: { initials: string; name: stri
   return <View style={styles.contactRow}><View style={styles.contactAvatar}><Text style={styles.contactInitials}>{initials}</Text></View><View style={styles.contactCopy}><Text style={styles.contactName}>{name}</Text><Text style={styles.contactRelation}>{relation}</Text></View><TouchableOpacity style={styles.callButton}><Icon name="call" size={15} color={C.destructive} /><Text style={styles.callButtonText}>Call</Text></TouchableOpacity></View>;
 }
 
-function ProfileScreen({ onNavigate, topInset }: { onNavigate: (screen: Exclude<Screen, 'splash' | 'emergency'>) => void; topInset: number }) {
+function ProfileScreen({ onNavigate, topInset, userProfile, onOpenAuth, onLogout }: { onNavigate: (screen: Exclude<Screen, 'splash' | 'emergency'>) => void; topInset: number; userProfile?: UserProfile | null; onOpenAuth?: () => void; onLogout?: () => void }) {
   const [settings, setSettings] = useState({ push: true, location: true, scan: true, night: true, call: false });
   const [contactsOpen, setContactsOpen] = useState(false);
   const updateSetting = (key: keyof typeof settings) => setSettings((current) => ({ ...current, [key]: !current[key] }));
@@ -601,14 +611,71 @@ function ProfileScreen({ onNavigate, topInset }: { onNavigate: (screen: Exclude<
     { icon: 'moon-outline', label: 'Night mode alerts', key: 'night' },
     { icon: 'call-outline', label: 'SOS auto-call', key: 'call' },
   ];
+
+  const initials = userProfile ? userProfile.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() : 'SM';
+  const emergencyContactName = userProfile?.emergencyContactName || 'Priya S.';
+  const emergencyContactPhone = userProfile?.emergencyContactPhone || '9876500000';
+
   return (
     <Page active="profile" onNavigate={onNavigate} topInset={topInset}>
-      <TopBar title="Profile & settings" right={<TouchableOpacity><Icon name="ellipsis-horizontal" size={23} color={C.foreground} /></TouchableOpacity>} />
-      <View style={styles.profileCard}><View style={styles.profileAvatar}><Text style={styles.profileInitials}>SM</Text></View><View><Text style={styles.profileName}>Sukesh M</Text><Text style={styles.profileMeta}>24CS0949  ·  CSE Dept</Text><View style={styles.verifiedRow}><Icon name="checkmark-circle" size={13} color={C.success} /><Text style={styles.verifiedText}>Identity verified</Text></View></View><TouchableOpacity style={styles.editButton}><Icon name="create-outline" size={18} color={C.primary} /></TouchableOpacity></View>
+      <TopBar title="Profile & settings" right={<TouchableOpacity onPress={onOpenAuth}><Icon name="ellipsis-horizontal" size={23} color={C.foreground} /></TouchableOpacity>} />
+      <View style={styles.profileCard}>
+        <View style={styles.profileAvatar}>
+          <Text style={styles.profileInitials}>{initials}</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.profileName}>{userProfile ? userProfile.name : 'Sukesh M'}</Text>
+          <Text style={styles.profileMeta}>📱 {userProfile ? userProfile.mobileNumber : '9876543210'}  ·  🩸 {userProfile?.bloodGroup || 'O+'}</Text>
+          <View style={styles.verifiedRow}>
+            <Icon name="checkmark-circle" size={13} color={C.success} />
+            <Text style={styles.verifiedText}>Synced to MongoDB Atlas</Text>
+          </View>
+        </View>
+        <TouchableOpacity onPress={onOpenAuth} style={styles.editButton}>
+          <Icon name="create-outline" size={18} color={C.primary} />
+        </TouchableOpacity>
+      </View>
       <SectionHeading title="Settings" />
-      <View style={styles.settingsCard}>{rows.map((row) => <View key={row.label} style={styles.settingRow}><View style={styles.settingLeading}><Icon name={row.icon} size={20} color={C.primary} /><Text style={styles.settingLabel}>{row.label}</Text></View><Switch value={row.key ? settings[row.key] : false} onValueChange={() => row.key && updateSetting(row.key)} trackColor={{ false: C.border, true: '#93C5FD' }} thumbColor={row.key && settings[row.key] ? C.primary : '#F8FAFC'} /></View>)}<TouchableOpacity onPress={() => setContactsOpen(!contactsOpen)} style={styles.settingRow}><View style={styles.settingLeading}><Icon name="people-outline" size={20} color={C.primary} /><Text style={styles.settingLabel}>Emergency contacts</Text></View><Icon name={contactsOpen ? 'chevron-down' : 'chevron-forward'} size={19} color={C.mutedForeground} /></TouchableOpacity>{contactsOpen ? <View style={styles.contactsEditor}><ContactRow initials="PS" name="Priya S." relation="Sister" /><ContactRow initials="RM" name="Rajan M." relation="Father" /><Button label="Add contact" variant="soft" icon="add" onPress={() => undefined} /></View> : null}</View>
-      <TouchableOpacity style={styles.aboutRow}><View style={styles.settingLeading}><Icon name="information-circle-outline" size={20} color={C.primary} /><Text style={styles.settingLabel}>About SafeSignal AI</Text></View><Icon name="chevron-forward" size={19} color={C.mutedForeground} /></TouchableOpacity>
-      <TouchableOpacity style={styles.logoutButton}><Icon name="log-out-outline" size={18} color={C.destructive} /><Text style={styles.logoutText}>Log out</Text></TouchableOpacity>
+      <View style={styles.settingsCard}>
+        {rows.map((row) => (
+          <View key={row.label} style={styles.settingRow}>
+            <View style={styles.settingLeading}>
+              <Icon name={row.icon} size={20} color={C.primary} />
+              <Text style={styles.settingLabel}>{row.label}</Text>
+            </View>
+            <Switch
+              value={row.key ? settings[row.key] : false}
+              onValueChange={() => row.key && updateSetting(row.key)}
+              trackColor={{ false: C.border, true: '#93C5FD' }}
+              thumbColor={row.key && settings[row.key] ? C.primary : '#F8FAFC'}
+            />
+          </View>
+        ))}
+        <TouchableOpacity onPress={() => setContactsOpen(!contactsOpen)} style={styles.settingRow}>
+          <View style={styles.settingLeading}>
+            <Icon name="people-outline" size={20} color={C.primary} />
+            <Text style={styles.settingLabel}>Emergency contacts</Text>
+          </View>
+          <Icon name={contactsOpen ? 'chevron-down' : 'chevron-forward'} size={19} color={C.mutedForeground} />
+        </TouchableOpacity>
+        {contactsOpen ? (
+          <View style={styles.contactsEditor}>
+            <ContactRow initials={emergencyContactName.slice(0, 2).toUpperCase()} name={emergencyContactName} relation={`Phone: ${emergencyContactPhone}`} />
+            <Button label="Update details" variant="soft" icon="create" onPress={() => onOpenAuth?.()} />
+          </View>
+        ) : null}
+      </View>
+      <TouchableOpacity onPress={onOpenAuth} style={styles.aboutRow}>
+        <View style={styles.settingLeading}>
+          <Icon name="information-circle-outline" size={20} color={C.primary} />
+          <Text style={styles.settingLabel}>Account details & MongoDB status</Text>
+        </View>
+        <Icon name="chevron-forward" size={19} color={C.mutedForeground} />
+      </TouchableOpacity>
+      <TouchableOpacity onPress={onLogout} style={styles.logoutButton}>
+        <Icon name="log-out-outline" size={18} color={C.destructive} />
+        <Text style={styles.logoutText}>Log out</Text>
+      </TouchableOpacity>
     </Page>
   );
 }
@@ -638,11 +705,25 @@ export default function SafeSignalHome() {
     subtitle: 'Anna Salai, Chennai, Tamil Nadu',
   });
 
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+
   useEffect(() => {
+    getStoredUserSession().then((profile) => {
+      if (profile) {
+        setUserProfile(profile);
+      }
+    });
     fetchTamilNaduNewsIncidents().then((data) => {
       setIncidents(data);
     });
   }, []);
+
+  const handleLogout = async () => {
+    await clearUserSession();
+    setUserProfile(null);
+    setAuthModalOpen(true);
+  };
 
   const toggleSos = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => undefined);
@@ -669,10 +750,14 @@ export default function SafeSignalHome() {
       const currentSosCoords = { lat, lng, subtitle: locSub };
       setSosCoords(currentSosCoords);
 
+      const userSubInfo = userProfile
+        ? ` • User: ${userProfile.name} (${userProfile.mobileNumber}) • Blood: ${userProfile.bloodGroup}`
+        : '';
+
       const sosIncident: ThreatIncident = {
         id: 'sos_active_pin',
         title: '🚨 ACTIVE SOS EMERGENCY',
-        subtitle: locSub,
+        subtitle: `${locSub}${userSubInfo}`,
         category: 'Crime',
         district: 'Emergency Location',
         lat,
@@ -745,13 +830,27 @@ export default function SafeSignalHome() {
     setScreen('emergency');
   };
 
-  if (screen === 'splash') return <SplashScreen onStart={() => setScreen('home')} topInset={topInset} bottomInset={bottomInset} />;
-  if (screen === 'home') return <HomeScreen danger={danger} onToggleDanger={() => setDanger(!danger)} onNavigate={navigate} onEmergency={openEmergency} onNotification={() => navigate('alerts')} topInset={topInset} incidents={displayIncidents} />;
-  if (screen === 'route') return <RouteScreen onNavigate={navigate} onBack={() => navigate('home')} onEmergency={openEmergency} topInset={topInset} incidents={displayIncidents} />;
-  if (screen === 'scan') return <ScanScreen onNavigate={navigate} topInset={topInset} />;
-  if (screen === 'alerts') return <AlertsScreen filter={alertFilter} setFilter={setAlertFilter} onNavigate={navigate} topInset={topInset} incidents={displayIncidents} />;
-  if (screen === 'profile') return <ProfileScreen onNavigate={navigate} topInset={topInset} />;
-  return <EmergencyScreen onBack={() => navigate('home')} topInset={topInset} activeSos={activeSos} onToggleSos={toggleSos} />;
+  const renderActiveScreen = () => {
+    if (screen === 'splash') return <SplashScreen onStart={() => setScreen('home')} topInset={topInset} bottomInset={bottomInset} />;
+    if (screen === 'home') return <HomeScreen danger={danger} onToggleDanger={() => setDanger(!danger)} onNavigate={navigate} onEmergency={openEmergency} onNotification={() => navigate('alerts')} topInset={topInset} incidents={displayIncidents} userProfile={userProfile} onOpenAuth={() => setAuthModalOpen(true)} />;
+    if (screen === 'route') return <RouteScreen onNavigate={navigate} onBack={() => navigate('home')} onEmergency={openEmergency} topInset={topInset} incidents={displayIncidents} />;
+    if (screen === 'scan') return <ScanScreen onNavigate={navigate} topInset={topInset} />;
+    if (screen === 'alerts') return <AlertsScreen filter={alertFilter} setFilter={setAlertFilter} onNavigate={navigate} topInset={topInset} incidents={displayIncidents} />;
+    if (screen === 'profile') return <ProfileScreen onNavigate={navigate} topInset={topInset} userProfile={userProfile} onOpenAuth={() => setAuthModalOpen(true)} onLogout={handleLogout} />;
+    return <EmergencyScreen onBack={() => navigate('home')} topInset={topInset} activeSos={activeSos} onToggleSos={toggleSos} />;
+  };
+
+  return (
+    <View style={{ flex: 1 }}>
+      {renderActiveScreen()}
+      <AuthModal
+        visible={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        onAuthSuccess={(prof) => setUserProfile(prof)}
+        currentUser={userProfile}
+      />
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
