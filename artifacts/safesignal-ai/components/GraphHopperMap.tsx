@@ -335,11 +335,7 @@ export function GraphHopperMap({
         incidentBounds.push([item.lat, item.lng]);
       });
 
-      updateZoomStyles();
-
-      if (accidentBlockageMarker) {
-        setTimeout(function() { accidentBlockageMarker.openPopup(); }, 500);
-      } else if (sosMarker && sosCoords) {
+      if (sosMarker && sosCoords) {
         map.setView(sosCoords, 16);
         setTimeout(function() { sosMarker.openPopup(); }, 300);
       } else if (!${hasDestination} && incidentBounds.length > 0) {
