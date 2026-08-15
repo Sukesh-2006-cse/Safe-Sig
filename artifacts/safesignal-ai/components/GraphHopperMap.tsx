@@ -362,6 +362,8 @@ export function GraphHopperMap({
     var incidents = ${JSON.stringify(incidents)};
     if (incidents && incidents.length > 0) {
       var incidentBounds = [];
+      var sosMarker = null;
+      var sosCoords = null;
       incidents.forEach(function(item) {
         var iconHtml = '⚠️';
         var pinClass = 'round-pin round-pin-hazard';
@@ -403,13 +405,20 @@ export function GraphHopperMap({
           (item.sourceUrl ? '<a href="' + item.sourceUrl + '" target="_blank" style="display:inline-block; font-size:11px; color:#2563EB; font-weight:600; text-decoration:none; background:#EFF6FF; padding:4px 8px; border-radius:6px;">Read full news report &rarr;</a>' : '') +
           '</div>';
 
-        L.marker([item.lat, item.lng], { icon: markerIcon }).addTo(map).bindPopup(popupHtml);
+        var marker = L.marker([item.lat, item.lng], { icon: markerIcon }).addTo(map).bindPopup(popupHtml);
+        if (item.id.indexOf('sos') !== -1 || (item.title && item.title.indexOf('SOS') !== -1)) {
+          sosMarker = marker;
+          sosCoords = [item.lat, item.lng];
+        }
         incidentBounds.push([item.lat, item.lng]);
       });
 
       updateZoomStyles();
 
-      if (!${hasDestination} && incidentBounds.length > 0) {
+      if (sosMarker && sosCoords) {
+        map.setView(sosCoords, 16);
+        setTimeout(function() { sosMarker.openPopup(); }, 300);
+      } else if (!${hasDestination} && incidentBounds.length > 0) {
         var bounds = L.latLngBounds(incidentBounds);
         map.fitBounds(bounds, { padding: [36, 36], maxZoom: 13 });
       }

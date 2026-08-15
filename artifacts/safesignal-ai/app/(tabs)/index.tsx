@@ -19,6 +19,7 @@ import colors from '@/constants/colors';
 import { GraphHopperMap, Coords } from '@/components/GraphHopperMap';
 import { GRAPHHOPPER_API_KEY, DEFAULT_ORIGIN } from '@/constants/config';
 import { useLocationAndRouting } from '@/hooks/useLocationAndRouting';
+import * as Location from 'expo-location';
 import { fetchTamilNaduNewsIncidents, ThreatIncident, ThreatCategory } from '@/services/tamilNaduNewsService';
 import { saveIncidentsToMongoDB } from '@/services/mongoService';
 
@@ -568,6 +569,12 @@ export default function SafeSignalHome() {
   const [alertFilter, setAlertFilter] = useState<string>('All');
   const [incidents, setIncidents] = useState<ThreatIncident[]>([]);
   const [activeSos, setActiveSos] = useState<boolean>(false);
+  const { originCoords } = useLocationAndRouting();
+  const [sosCoords, setSosCoords] = useState<{ lat: number; lng: number; subtitle: string }>({
+    lat: DEFAULT_ORIGIN.lat,
+    lng: DEFAULT_ORIGIN.lng,
+    subtitle: 'Anna Salai, Chennai, Tamil Nadu',
+  });
 
   useEffect(() => {
     fetchTamilNaduNewsIncidents().then((data) => {
@@ -575,24 +582,45 @@ export default function SafeSignalHome() {
     });
   }, []);
 
-  const toggleSos = () => {
+  const toggleSos = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => undefined);
     const nextState = !activeSos;
     setActiveSos(nextState);
 
     if (nextState) {
+      let lat = originCoords?.lat || DEFAULT_ORIGIN.lat;
+      let lng = originCoords?.lng || DEFAULT_ORIGIN.lng;
+      let locSub = originCoords?.name || 'Live GPS Location';
+
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          lat = loc.coords.latitude;
+          lng = loc.coords.longitude;
+          locSub = `Live GPS (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+        }
+      } catch (e) {
+        console.warn('GPS SOS location warning:', e);
+      }
+
+      const currentSosCoords = { lat, lng, subtitle: locSub };
+      setSosCoords(currentSosCoords);
+
       const sosIncident: ThreatIncident = {
         id: 'sos_active_pin',
         title: '🚨 ACTIVE SOS EMERGENCY',
-        subtitle: 'Live Emergency Location Mapped',
+        subtitle: locSub,
         category: 'Crime',
-        district: 'Chennai',
-        lat: DEFAULT_ORIGIN.lat,
-        lng: DEFAULT_ORIGIN.lng,
+        district: 'Emergency Location',
+        lat,
+        lng,
         time: 'Live Emergency Now',
         tone: 'danger',
         sourceName: 'SafeSignal Emergency SOS',
       };
+
+      setIncidents((prev) => [sosIncident, ...prev.filter((i) => i.id !== 'sos_active_pin')]);
       saveIncidentsToMongoDB([sosIncident]).catch((e) => console.warn(e));
     }
   };
@@ -600,11 +628,11 @@ export default function SafeSignalHome() {
   const activeSosIncident: ThreatIncident = {
     id: 'sos_active_pin',
     title: '🚨 ACTIVE SOS EMERGENCY',
-    subtitle: 'Live Emergency Location Mapped',
+    subtitle: sosCoords.subtitle,
     category: 'Crime',
-    district: 'Chennai',
-    lat: DEFAULT_ORIGIN.lat,
-    lng: DEFAULT_ORIGIN.lng,
+    district: 'Emergency Location',
+    lat: sosCoords.lat,
+    lng: sosCoords.lng,
     time: 'Live Emergency Now',
     tone: 'danger',
     sourceName: 'SafeSignal Emergency SOS',
