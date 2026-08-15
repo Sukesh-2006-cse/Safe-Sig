@@ -179,7 +179,7 @@ export function GraphHopperMap({
           iconSize: [24, 24],
           iconAnchor: [12, 12]
         });
-        L.marker([${origin.lat}, ${origin.lng}], { icon: userLocationIcon }).addTo(map).bindPopup('<b>Your Current Location</b><br/>Kundrathur (GPS Active)').openPopup();
+        L.marker([${origin.lat}, ${origin.lng}], { icon: userLocationIcon }).addTo(map).bindPopup('<b>' + ${JSON.stringify(origin.name || 'Your Current Location')} + '</b>').openPopup();
         `
         : `
         var safeCoords = ${JSON.stringify(safeCoords)};

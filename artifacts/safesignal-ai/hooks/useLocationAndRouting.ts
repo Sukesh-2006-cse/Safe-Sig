@@ -115,9 +115,9 @@ export function useLocationAndRouting(
   const [destinationText, setDestinationText] = useState<string>(initialDestination);
 
   const [originCoords, setOriginCoords] = useState<LocationCoords>({
-    lat: 12.9810,
-    lng: 80.0520,
-    name: 'Current location (Kundrathur)',
+    lat: DEFAULT_ORIGIN.lat,
+    lng: DEFAULT_ORIGIN.lng,
+    name: DEFAULT_ORIGIN.name,
   });
 
   const [destinationCoords, setDestinationCoords] = useState<LocationCoords | null>(
@@ -130,7 +130,30 @@ export function useLocationAndRouting(
   const [isGeocodingDest, setIsGeocodingDest] = useState<boolean>(false);
   const [gpsStatus, setGpsStatus] = useState<'idle' | 'locating' | 'ready' | 'denied'>('idle');
 
-  // 1. Request GPS Foreground Location for Source
+  // Request GPS Foreground Location for Source on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const loc = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          if (loc && loc.coords) {
+            setOriginCoords({
+              lat: loc.coords.latitude,
+              lng: loc.coords.longitude,
+              name: 'Current Location (GPS)',
+            });
+            setGpsStatus('ready');
+          }
+        }
+      } catch (err) {
+        console.warn('Auto GPS location request warning:', err);
+      }
+    })();
+  }, []);
+
   const useCurrentGpsAsSource = useCallback(async () => {
     setGpsStatus('locating');
     try {
@@ -142,10 +165,10 @@ export function useLocationAndRouting(
         const coords = {
           lat: loc.coords.latitude,
           lng: loc.coords.longitude,
-          name: 'Current location (GPS)',
+          name: 'Current Location (GPS)',
         };
         setOriginCoords(coords);
-        setSourceText('Current location (GPS)');
+        setSourceText('Current Location (GPS)');
         setGpsStatus('ready');
       } else {
         setGpsStatus('denied');

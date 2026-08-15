@@ -13,9 +13,9 @@ export const VIRUSTOTAL_KEY = process.env.VIRUSTOTAL_KEY || process.env.EXPO_PUB
 export const SAFE_BROWSING_KEY = process.env.SAFE_BROWSING_KEY || process.env.EXPO_PUBLIC_SAFE_BROWSING_KEY || '';
 
 export const DEFAULT_ORIGIN = {
-  name: 'Current Location (Kundrathur, Chennai)',
-  lat: 12.9810,
-  lng: 80.0520,
+  name: 'Current Location (Anakaputhur / Kundrathur)',
+  lat: 12.9780,
+  lng: 80.1150,
 };
 
 export const DEFAULT_DESTINATION = {
