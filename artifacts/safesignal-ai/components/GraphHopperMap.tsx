@@ -72,8 +72,8 @@ export function GraphHopperMap({
     const defaultKundrathurToGuindyFast: [number, number][] = [
       [12.9810, 80.0520],
       [12.9800, 80.0900],
-      [12.9785, 80.1180],
-      [12.9765, 80.1360],
+      [12.9750, 80.1180],
+      [12.9715, 80.1340],
       [12.9690, 80.1470],
       [12.9840, 80.1650],
       [12.9980, 80.1910],
@@ -83,10 +83,8 @@ export function GraphHopperMap({
     async function fetchRouteMultiEngine() {
       setLoading(true);
       try {
-        // 1. Shortest Direct Route (Red Dotted Line straight along Pammal Main Road SH 113A)
-        const pammalLat = 12.9765;
-        const pammalLng = 80.1360;
-        const directUrl = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${pammalLng},${pammalLat};${destination!.lng},${destination!.lat}?overview=full&geometries=geojson`;
+        // 1. Shortest Direct Route (Direct Kundrathur -> Guindy via Pammal Main Road)
+        const directUrl = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${destination!.lng},${destination!.lat}?overview=full&geometries=geojson`;
         const resDirect = await fetch(directUrl);
         let rawFast: [number, number][] = defaultKundrathurToGuindyFast;
         if (resDirect.ok) {
