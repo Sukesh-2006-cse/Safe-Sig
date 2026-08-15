@@ -628,6 +628,35 @@ export default function SafeSignalHome() {
     }
   };
 
+  const mockRouteIncidents = useMemo(() => {
+    return [
+      {
+        id: 'mock_default_accident_1',
+        title: '🚨 Severe Vehicle Accident Reported',
+        subtitle: 'Corridor Traffic & Accident Hotspot',
+        category: 'Accident' as ThreatCategory,
+        district: 'Main Route Corridor',
+        lat: originCoords.lat + 0.004,
+        lng: originCoords.lng + 0.005,
+        time: '10 mins ago',
+        tone: 'danger' as const,
+        sourceName: 'TN Highway Traffic Police',
+      },
+      {
+        id: 'mock_default_crime_2',
+        title: '⚠️ Night Theft & Robbery Zone',
+        subtitle: 'Unsafe Corridor Stretch',
+        category: 'Crime' as ThreatCategory,
+        district: 'High Crime Risk Zone',
+        lat: originCoords.lat - 0.005,
+        lng: originCoords.lng - 0.004,
+        time: '25 mins ago',
+        tone: 'danger' as const,
+        sourceName: 'SafeSignal Crime Scanner',
+      },
+    ];
+  }, [originCoords.lat, originCoords.lng]);
+
   const activeSosIncident: ThreatIncident = {
     id: 'sos_active_pin',
     title: '🚨 ACTIVE SOS EMERGENCY',
@@ -641,9 +670,12 @@ export default function SafeSignalHome() {
     sourceName: 'SafeSignal Emergency SOS',
   };
 
-  const displayIncidents = activeSos
-    ? [activeSosIncident, ...incidents.filter((i) => i.id !== 'sos_active_pin')]
-    : incidents.filter((i) => i.id !== 'sos_active_pin');
+  const displayIncidents = useMemo(() => {
+    const list = activeSos
+      ? [activeSosIncident, ...incidents.filter((i) => i.id !== 'sos_active_pin')]
+      : incidents.filter((i) => i.id !== 'sos_active_pin');
+    return [...mockRouteIncidents, ...list];
+  }, [activeSos, activeSosIncident, incidents, mockRouteIncidents]);
 
   const navigate = (next: Exclude<Screen, 'splash' | 'emergency'>) => {
     Haptics.selectionAsync().catch(() => undefined);

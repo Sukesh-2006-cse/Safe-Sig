@@ -102,9 +102,20 @@ export function GraphHopperMap({
         console.warn('GraphHopper route warning, trying OSRM fallback:', err?.message);
       }
 
-      // Engine 2: OSRM Public Driving Router (High Performance & Zero Quota Limit)
+      // Engine 2: OSRM Public Driving Router (With Safe Detour for 'safe' vs Direct for 'fast')
       try {
-        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${destination!.lng},${destination!.lat}?overview=full&geometries=geojson`;
+        let osrmUrl = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${destination!.lng},${destination!.lat}?overview=full&geometries=geojson`;
+        
+        if (activeRouteType === 'safe') {
+          const midLat = (origin.lat + destination!.lat) / 2;
+          const midLng = (origin.lng + destination!.lng) / 2;
+          const dLat = destination!.lat - origin.lat;
+          const dLng = destination!.lng - origin.lng;
+          const detourLat = midLat + (dLng >= 0 ? 0.007 : -0.007);
+          const detourLng = midLng + (dLat >= 0 ? -0.007 : 0.007);
+          osrmUrl = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${detourLng},${detourLat};${destination!.lng},${destination!.lat}?overview=full&geometries=geojson`;
+        }
+
         const res = await fetch(osrmUrl);
         if (res.ok) {
           const data = await res.json();
@@ -150,7 +161,8 @@ export function GraphHopperMap({
     return () => { isMounted = false; };
   }, [origin.lat, origin.lng, destination?.lat, destination?.lng, activeRouteType, hasDestination]);
 
-  const lineColor = activeRouteType === 'safe' ? '#2563EB' : '#EF4444';
+  const lineColor = activeRouteType === 'safe' ? '#10B981' : '#DC2626';
+  const glowColor = activeRouteType === 'safe' ? '#059669' : '#EF4444';
   const coordsJson = JSON.stringify(routeCoordinates);
 
   const mapHtml = `
@@ -162,19 +174,6 @@ export function GraphHopperMap({
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
-    html, body, #map {
-      height: 100%;
-      width: 100%;
-      margin: 0;
-      padding: 0;
-      background-color: #F8FAFC;
-    }
-    .leaflet-container {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    }
-    .custom-badge {
-      background: #ffffff;
-      border: 2px solid ${lineColor};
       border-radius: 12px;
       padding: 4px 8px;
       font-size: 11px;
