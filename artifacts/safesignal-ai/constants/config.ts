@@ -19,7 +19,7 @@ export const DEFAULT_ORIGIN = {
 };
 
 export const DEFAULT_DESTINATION = {
-  name: 'Guindy, Chennai',
+  name: 'Guindy',
   lat: 13.0067,
   lng: 80.2020,
 };

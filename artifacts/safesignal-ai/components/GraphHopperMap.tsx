@@ -60,29 +60,34 @@ export function GraphHopperMap({
 
     const defaultKundrathurToGuindySafe: [number, number][] = [
       [12.9810, 80.0520],
-      [12.9920, 80.0750],
-      [13.0060, 80.1010],
-      [13.0310, 80.1560],
-      [13.0180, 80.1850],
+      [12.9910, 80.0620],
+      [13.0030, 80.0880],
+      [13.0130, 80.1010],
+      [13.0230, 80.1110],
+      [13.0360, 80.1560],
+      [13.0230, 80.1760],
+      [13.0120, 80.1980],
       [13.0067, 80.2020],
     ];
 
     const defaultKundrathurToGuindyFast: [number, number][] = [
       [12.9810, 80.0520],
-      [12.9750, 80.0950],
-      [12.9730, 80.1340],
-      [12.9840, 80.1650],
-      [12.9980, 80.1910],
+      [12.9910, 80.0620],
+      [13.0030, 80.0880],
+      [13.0130, 80.1010],
+      [13.0120, 80.1310],
+      [13.0160, 80.1610],
+      [13.0180, 80.1850],
       [13.0067, 80.2020],
     ];
 
     async function fetchRouteMultiEngine() {
       setLoading(true);
       try {
-        // 1. Shortest Direct Route (Red Line passing through Pammal Accident Spot)
-        const pammalLat = 12.9730;
-        const pammalLng = 80.1340;
-        const directUrl = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${pammalLng},${pammalLat};${destination!.lng},${destination!.lat}?overview=full&geometries=geojson`;
+        // 1. Shortest Direct Route (Blue Line passing through Manapakkam / Kolapakkam)
+        const manapakkamLat = 13.0160;
+        const manapakkamLng = 80.1610;
+        const directUrl = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${manapakkamLng},${manapakkamLat};${destination!.lng},${destination!.lat}?overview=full&geometries=geojson`;
         const resDirect = await fetch(directUrl);
         let rawFast: [number, number][] = defaultKundrathurToGuindyFast;
         if (resDirect.ok) {
@@ -92,14 +97,14 @@ export function GraphHopperMap({
           }
         }
 
-        // 2. Safest Detour Route (Emerald Green Solid Line detouring North via Kovur / Porur)
-        const porurLat = 13.0180;
-        const porurLng = 80.1250;
+        // 2. Safest Detour Route (Emerald Green Solid Line detouring North via Porur / Ramapuram)
+        const porurLat = 13.0360;
+        const porurLng = 80.1560;
         const safeUrl = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${porurLng},${porurLat};${destination!.lng},${destination!.lat}?overview=full&geometries=geojson`;
         const resSafe = await fetch(safeUrl);
         let rawSafe: [number, number][] = defaultKundrathurToGuindySafe;
-        let distKm = '14.8 km';
-        let durMin = 24;
+        let distKm = '14.2 km';
+        let durMin = 22;
 
         if (resSafe.ok) {
           const dataSafe = await resSafe.json();
@@ -173,22 +178,23 @@ export function GraphHopperMap({
         var safeCoords = ${JSON.stringify(safeCoords)};
         var fastCoords = ${JSON.stringify(fastCoords)};
 
+        // Shortest Path - Blue Line (#2563EB) via Kolapakkam / Manapakkam
         if (fastCoords && fastCoords.length > 0) {
           L.polyline(fastCoords, {
-            color: '#EF4444',
-            weight: 5,
-            opacity: ${activeRouteType === 'fast' ? 0.95 : 0.45},
-            dashArray: '8, 8',
+            color: '#2563EB',
+            weight: 6,
+            opacity: ${activeRouteType === 'fast' ? 0.95 : 0.75},
             lineCap: 'round',
             lineJoin: 'round'
           }).addTo(map);
         }
 
+        // Safest Path - Emerald Green Line (#10B981) via Porur / Ramapuram
         if (safeCoords && safeCoords.length > 0) {
           L.polyline(safeCoords, {
             color: '#059669',
             weight: 10,
-            opacity: 0.35,
+            opacity: 0.3,
             lineCap: 'round',
             lineJoin: 'round'
           }).addTo(map);
@@ -207,7 +213,7 @@ export function GraphHopperMap({
             iconSize: [18, 18],
             iconAnchor: [9, 9]
           });
-          L.marker(safeCoords[0] || [${origin.lat}, ${origin.lng}], { icon: startIcon }).addTo(map).bindPopup('<b>Start:</b> Kundrathur, Chennai');
+          L.marker(safeCoords[0] || [${origin.lat}, ${origin.lng}], { icon: startIcon }).addTo(map).bindPopup('<b>Start:</b> Kundrathur');
 
           var endIcon = L.divIcon({
             className: 'end-marker',
@@ -215,8 +221,8 @@ export function GraphHopperMap({
             iconSize: [20, 20],
             iconAnchor: [10, 10]
           });
-          L.marker(safeCoords[safeCoords.length - 1] || [${destination?.lat}, ${destination?.lng}], { icon: endIcon }).addTo(map).bindPopup('<b>Destination:</b> Guindy, Chennai');
-          map.fitBounds(safePoly.getBounds(), { padding: [32, 32] });
+          L.marker(safeCoords[safeCoords.length - 1] || [${destination?.lat}, ${destination?.lng}], { icon: endIcon }).addTo(map).bindPopup('<b>Destination:</b> Guindy');
+
         }
         `
     }

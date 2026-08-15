@@ -206,7 +206,7 @@ function HomeScreen({ danger, onToggleDanger, onNavigate, onEmergency, onNotific
     swapLocations,
     geocodeSource,
     geocodeDestination,
-  } = useLocationAndRouting('Current location (GPS)', 'Guindy, Chennai');
+  } = useLocationAndRouting('Current location (GPS)', 'Guindy');
   const [selectedRoute, setSelectedRoute] = useState<'safe' | 'fast'>('safe');
   const [navigating, setNavigating] = useState(false);
   const [showTripDetails, setShowTripDetails] = useState(false);
@@ -270,7 +270,7 @@ function HomeScreen({ danger, onToggleDanger, onNavigate, onEmergency, onNotific
               <TextInput
                 value={destinationText}
                 onChangeText={setDestinationText}
-                placeholder="Guindy, Chennai"
+                placeholder="Guindy"
                 placeholderTextColor={C.mutedForeground}
                 style={[styles.routeHomeTextInput, { flex: 1 }]}
               />
@@ -306,7 +306,7 @@ function HomeScreen({ danger, onToggleDanger, onNavigate, onEmergency, onNotific
         <View style={styles.mapPreviewTop}>
           <View style={styles.mapPreviewStatus}>
             <View style={styles.mapPreviewStatusDot} />
-            <Text style={styles.mapPreviewStatusText}>Live Route: Current Location ➔ Guindy, Chennai</Text>
+            <Text style={styles.mapPreviewStatusText}>Live Route: Current Location ➔ Guindy</Text>
           </View>
         </View>
         <GraphHopperMap origin={originCoords} destination={destinationCoords} routeType={selectedRoute} height={200} incidents={incidents} />
@@ -314,10 +314,10 @@ function HomeScreen({ danger, onToggleDanger, onNavigate, onEmergency, onNotific
 
       <View style={styles.bestRouteHeading}><View><Text style={styles.sectionTitle}>Guindy Route Options</Text><Text style={styles.bestRouteSub}>Prioritizing safety over speed</Text></View><View style={styles.routeScore}><Icon name="shield-checkmark" size={14} color={C.success} /><Text style={styles.routeScoreText}>94 safety score</Text></View></View>
       <TouchableOpacity onPress={() => setSelectedRoute('safe')} activeOpacity={0.88} style={[styles.homeRouteOption, selectedRoute === 'safe' && styles.homeRouteOptionSelected]}>
-        <View style={styles.homeRouteIcon}><Icon name="shield-checkmark" size={21} color={C.success} /></View><View style={styles.homeRouteCopy}><View style={styles.homeRouteTitleRow}><Text style={styles.homeRouteTitle}>Safest Route to Guindy</Text><Text style={styles.homeRecommended}>RECOMMENDED</Text></View><Text style={styles.homeRouteMeta}>22 min  ·  13.2 km  ·  Bypasses Kathipara Accident Zone</Text></View><View style={[styles.radio, selectedRoute === 'safe' && styles.radioSelected]}>{selectedRoute === 'safe' ? <View style={styles.radioInner} /> : null}</View>
+        <View style={styles.homeRouteIcon}><Icon name="shield-checkmark" size={21} color={C.success} /></View><View style={styles.homeRouteCopy}><View style={styles.homeRouteTitleRow}><Text style={styles.homeRouteTitle}>Safest Route (Green)</Text><Text style={styles.homeRecommended}>RECOMMENDED</Text></View><Text style={styles.homeRouteMeta}>22 min  ·  14.2 km  ·  Bypasses via Porur & Ramapuram</Text></View><View style={[styles.radio, selectedRoute === 'safe' && styles.radioSelected]}>{selectedRoute === 'safe' ? <View style={styles.radioInner} /> : null}</View>
       </TouchableOpacity>
       <TouchableOpacity onPress={() => setSelectedRoute('fast')} activeOpacity={0.88} style={[styles.homeRouteOption, selectedRoute === 'fast' && styles.homeRouteOptionFastSelected]}>
-        <View style={[styles.homeRouteIcon, styles.homeRouteIconFast]}><Icon name="flash" size={21} color={C.warning} /></View><View style={styles.homeRouteCopy}><View style={styles.homeRouteTitleRow}><Text style={styles.homeRouteTitle}>Shortest Direct Route</Text><Text style={styles.homeNotRecommended}>HIGH RISK</Text></View><Text style={styles.homeRouteMeta}>16 min  ·  10.8 km  ·  Passes Kathipara Accident & Saidapet Crime</Text></View><View style={[styles.radio, selectedRoute === 'fast' && { borderColor: C.warning }]}>{selectedRoute === 'fast' ? <View style={[styles.radioInner, { backgroundColor: C.warning }]} /> : null}</View>
+        <View style={[styles.homeRouteIcon, { backgroundColor: '#EFF6FF' }]}><Icon name="flash" size={21} color={C.primary} /></View><View style={styles.homeRouteCopy}><View style={styles.homeRouteTitleRow}><Text style={styles.homeRouteTitle}>Shortest Route (Blue)</Text><Text style={{ color: C.primary, fontSize: 10, fontWeight: '800' }}>SHORTEST</Text></View><Text style={styles.homeRouteMeta}>16 min  ·  11.2 km  ·  Direct via Kolapakkam & Manapakkam</Text></View><View style={[styles.radio, selectedRoute === 'fast' && { borderColor: C.primary }]}>{selectedRoute === 'fast' ? <View style={[styles.radioInner, { backgroundColor: C.primary }]} /> : null}</View>
       </TouchableOpacity>
 
       {showTripDetails ? <View style={styles.tripDetails}><View style={styles.tripDetail}><Icon name="shield-checkmark-outline" size={17} color={C.success} /><Text style={styles.tripDetailText}>Safest route detours around Kathipara Junction</Text></View><View style={styles.tripDetail}><Icon name="wifi-outline" size={17} color={C.primary} /><Text style={styles.tripDetailText}>Safe network coverage across Chennai corridor</Text></View></View> : null}
@@ -344,7 +344,7 @@ function RouteScreen({ onNavigate, onBack, onEmergency, topInset, incidents = []
     isGeocodingSource,
     isGeocodingDest,
     useCurrentGpsAsSource,
-  } = useLocationAndRouting('Current location (GPS)', 'Guindy, Chennai');
+  } = useLocationAndRouting('Current location (GPS)', 'Guindy');
   const [selectedRoute, setSelectedRoute] = useState<'safe' | 'fast'>('safe');
   return (
     <Page active="route" onNavigate={onNavigate} topInset={topInset}>
@@ -369,7 +369,7 @@ function RouteScreen({ onNavigate, onBack, onEmergency, topInset, incidents = []
           <TextInput
             value={destinationText}
             onChangeText={setDestinationText}
-            placeholder="Guindy, Chennai"
+            placeholder="Guindy"
             placeholderTextColor={C.mutedForeground}
             style={styles.textInput}
           />
@@ -384,14 +384,14 @@ function RouteScreen({ onNavigate, onBack, onEmergency, topInset, incidents = []
       </TouchableOpacity>
       <SectionHeading title="Choose your route to Guindy" />
       <TouchableOpacity onPress={() => setSelectedRoute('safe')} activeOpacity={0.88} style={[styles.routeCard, selectedRoute === 'safe' && styles.routeCardSelected, { borderLeftColor: C.success }]}>
-        <View style={styles.routeHeader}><View><View style={styles.recommendedBadge}><Icon name="checkmark-circle" size={13} color={C.success} /><Text style={styles.recommendedText}>Recommended</Text></View><Text style={styles.routeTitle}>Safest Route to Guindy</Text></View><View style={[styles.radio, selectedRoute === 'safe' && styles.radioSelected]}>{selectedRoute === 'safe' ? <View style={styles.radioInner} /> : null}</View></View>
-        <Text style={styles.routeStats}>22 min  ·  13.2 km  ·  <Text style={{ color: C.success }}>Risk: Low</Text></Text>
-        <View style={styles.chipRow}><View style={styles.successChip}><Text style={styles.chipTextSuccess}>Avoids Kathipara Accident</Text></View><View style={styles.successChip}><Text style={styles.chipTextSuccess}>Avoids Saidapet Crime</Text></View><View style={styles.successChip}><Text style={styles.chipTextSuccess}>Safe network</Text></View></View>
+        <View style={styles.routeHeader}><View><View style={styles.recommendedBadge}><Icon name="checkmark-circle" size={13} color={C.success} /><Text style={styles.recommendedText}>Recommended</Text></View><Text style={styles.routeTitle}>Safest Route (Green)</Text></View><View style={[styles.radio, selectedRoute === 'safe' && styles.radioSelected]}>{selectedRoute === 'safe' ? <View style={styles.radioInner} /> : null}</View></View>
+        <Text style={styles.routeStats}>22 min  ·  14.2 km  ·  <Text style={{ color: C.success }}>Risk: Low</Text></Text>
+        <View style={styles.chipRow}><View style={styles.successChip}><Text style={styles.chipTextSuccess}>Porur Detour</Text></View><View style={styles.successChip}><Text style={styles.chipTextSuccess}>Ramapuram Bypass</Text></View><View style={styles.successChip}><Text style={styles.chipTextSuccess}>Safe network</Text></View></View>
       </TouchableOpacity>
-      <TouchableOpacity onPress={() => setSelectedRoute('fast')} activeOpacity={0.88} style={[styles.routeCard, selectedRoute === 'fast' && styles.routeCardSelected, { borderLeftColor: C.destructive }]}>
-        <View style={styles.routeHeader}><View><View style={styles.recommendedBadge}><Icon name="warning" size={13} color={C.destructive} /><Text style={styles.notRecommendedText}>Not recommended</Text></View><Text style={styles.routeTitle}>Shortest Direct Route</Text></View><View style={[styles.radio, selectedRoute === 'fast' && { borderColor: C.destructive }]}>{selectedRoute === 'fast' ? <View style={[styles.radioInner, { backgroundColor: C.destructive }]} /> : null}</View></View>
-        <Text style={styles.routeStats}>16 min  ·  10.8 km  ·  <Text style={{ color: C.destructive }}>Risk: High</Text></Text>
-        <View style={styles.chipRow}><View style={styles.dangerChip}><Text style={styles.chipTextDanger}>Kathipara Accident Zone</Text></View><View style={styles.dangerChip}><Text style={styles.chipTextDanger}>Saidapet Crime Spot</Text></View><View style={styles.dangerChip}><Text style={styles.chipTextDanger}>Heavy Traffic</Text></View></View>
+      <TouchableOpacity onPress={() => setSelectedRoute('fast')} activeOpacity={0.88} style={[styles.routeCard, selectedRoute === 'fast' && styles.routeCardSelected, { borderLeftColor: C.primary }]}>
+        <View style={styles.routeHeader}><View><View style={[styles.recommendedBadge, { backgroundColor: '#EFF6FF' }]}><Icon name="flash" size={13} color={C.primary} /><Text style={[styles.recommendedText, { color: C.primary }]}>Shortest</Text></View><Text style={styles.routeTitle}>Shortest Direct Route (Blue)</Text></View><View style={[styles.radio, selectedRoute === 'fast' && { borderColor: C.primary }]}>{selectedRoute === 'fast' ? <View style={[styles.radioInner, { backgroundColor: C.primary }]} /> : null}</View></View>
+        <Text style={styles.routeStats}>16 min  ·  11.2 km  ·  <Text style={{ color: C.primary }}>Direct Path</Text></Text>
+        <View style={styles.chipRow}><View style={[styles.successChip, { backgroundColor: '#EFF6FF' }]}><Text style={[styles.chipTextSuccess, { color: C.primary }]}>Kolapakkam</Text></View><View style={[styles.successChip, { backgroundColor: '#EFF6FF' }]}><Text style={[styles.chipTextSuccess, { color: C.primary }]}>Manapakkam</Text></View><View style={[styles.successChip, { backgroundColor: '#EFF6FF' }]}><Text style={[styles.chipTextSuccess, { color: C.primary }]}>Nandambakkam</Text></View></View>
       </TouchableOpacity>
       <SectionHeading title="Emergency contacts" action="Manage" />
       <ContactRow initials="PS" name="Priya S." relation="Sister" />
