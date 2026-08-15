@@ -24,13 +24,17 @@ const COLLECTION_USERS = 'users';
 const clientMemoryIncidents: ThreatIncident[] = [];
 const clientMemoryUsers: Map<string, UserProfile> = new Map();
 
-// Dynamic Node MongoDB Driver Loader (Prevents Metro client bundler crash)
+// Dynamic Node MongoDB Driver Loader (Prevents Metro client bundler crash on React Native Android/iOS)
 function getNativeMongoClient() {
-  if (typeof window !== 'undefined') return null; // Browser / Metro client environment
+  // Completely skip in Browser / React Native (Expo Android & iOS) environment
+  if (typeof window !== 'undefined' || typeof process === 'undefined' || !process.versions?.node) {
+    return null;
+  }
   try {
-    const dns = require('dns');
+    const req = eval('require');
+    const dns = req('dns');
     try { dns.setServers(['8.8.8.8', '1.1.1.1']); } catch (e) {}
-    const { MongoClient } = require('mongodb');
+    const { MongoClient } = req('mongodb');
     return MongoClient;
   } catch (err) {
     return null;
