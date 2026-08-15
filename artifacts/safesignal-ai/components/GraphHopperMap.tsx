@@ -58,6 +58,24 @@ export function GraphHopperMap({
       return;
     }
 
+    const defaultKundrathurToGuindySafe: [number, number][] = [
+      [12.9810, 80.0520],
+      [12.9920, 80.0750],
+      [13.0060, 80.1010],
+      [13.0310, 80.1560],
+      [13.0180, 80.1850],
+      [13.0067, 80.2020],
+    ];
+
+    const defaultKundrathurToGuindyFast: [number, number][] = [
+      [12.9810, 80.0520],
+      [12.9750, 80.0950],
+      [12.9730, 80.1340],
+      [12.9840, 80.1650],
+      [12.9980, 80.1910],
+      [13.0067, 80.2020],
+    ];
+
     async function fetchRouteMultiEngine() {
       setLoading(true);
       try {
@@ -66,7 +84,7 @@ export function GraphHopperMap({
         const pammalLng = 80.1340;
         const directUrl = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${pammalLng},${pammalLat};${destination!.lng},${destination!.lat}?overview=full&geometries=geojson`;
         const resDirect = await fetch(directUrl);
-        let rawFast: [number, number][] = [];
+        let rawFast: [number, number][] = defaultKundrathurToGuindyFast;
         if (resDirect.ok) {
           const dataDirect = await resDirect.json();
           if (dataDirect.routes && dataDirect.routes.length > 0) {
@@ -79,7 +97,7 @@ export function GraphHopperMap({
         const porurLng = 80.1250;
         const safeUrl = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${porurLng},${porurLat};${destination!.lng},${destination!.lat}?overview=full&geometries=geojson`;
         const resSafe = await fetch(safeUrl);
-        let rawSafe: [number, number][] = [];
+        let rawSafe: [number, number][] = defaultKundrathurToGuindySafe;
         let distKm = '14.8 km';
         let durMin = 24;
 
@@ -95,8 +113,8 @@ export function GraphHopperMap({
 
         if (isMounted) {
           setFastCoords(rawFast);
-          setSafeCoords(rawSafe.length > 0 ? rawSafe : rawFast);
-          setRouteCoordinates(activeRouteType === 'safe' ? (rawSafe.length > 0 ? rawSafe : rawFast) : rawFast);
+          setSafeCoords(rawSafe);
+          setRouteCoordinates(activeRouteType === 'safe' ? rawSafe : rawFast);
           const info = { distanceKm: distKm, durationMin: durMin };
           setRouteInfo(info);
           onRouteLoaded?.(info);
@@ -104,7 +122,12 @@ export function GraphHopperMap({
         }
       } catch (err: any) {
         console.warn('Dual route fetch warning:', err);
-        if (isMounted) setLoading(false);
+        if (isMounted) {
+          setFastCoords(defaultKundrathurToGuindyFast);
+          setSafeCoords(defaultKundrathurToGuindySafe);
+          setRouteCoordinates(activeRouteType === 'safe' ? defaultKundrathurToGuindySafe : defaultKundrathurToGuindyFast);
+          setLoading(false);
+        }
       }
     }
 
@@ -308,7 +331,7 @@ export function GraphHopperMap({
   const destLat = destination?.lat || 0;
   const destLng = destination?.lng || 0;
   const incidentsHash = incidents.map(i => i.id).join('_');
-  const mapKey = `gh_${origin.lat.toFixed(3)}_${origin.lng.toFixed(3)}_${destLat.toFixed(3)}_${destLng.toFixed(3)}_${activeRouteType}_${hasDestination ? routeCoordinates.length : 0}_${incidents.length}_${incidentsHash}`;
+  const mapKey = `gh_${origin.lat.toFixed(3)}_${origin.lng.toFixed(3)}_${destLat.toFixed(3)}_${destLng.toFixed(3)}_${activeRouteType}_safe${safeCoords.length}_fast${fastCoords.length}_${incidents.length}_${incidentsHash}`;
 
   const renderMapCanvas = (mapHeight: DimensionValue, isFullScreen: boolean = false) => (
     <View style={[styles.container, isFullScreen ? { flex: 1, height: '100%', marginVertical: 0 } : { height: mapHeight }]}>

@@ -156,9 +156,8 @@ export function useLocationAndRouting(
     }
   }, []);
 
-  useEffect(() => {
-    useCurrentGpsAsSource();
-  }, [useCurrentGpsAsSource]);
+  // Auto GPS fetch on mount disabled to preserve pre-configured Kundrathur to Guindy corridor
+  // User can manually tap GPS pill to fetch live location when desired
 
   // 2. Geocode Source text input using Multi-Engine
   const geocodeSource = useCallback(async (query: string) => {
